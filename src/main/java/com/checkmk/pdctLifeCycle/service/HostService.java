@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -42,8 +43,13 @@ public class HostService {
         return hostRepository.findById(id).orElse(null);
     }
 
-    public List<Host> getCheckMkHost() {
+    public Host getCheckMkHostById(String id) {
+        return getCheckMkHosts().stream().filter(host -> host.getId().equals(id)).findFirst().orElse(null);
+    }
+
+    public List<Host> getCheckMkHosts() {
         String apiUrl = checkmkConfig.getApiUrl() + "/api/1.0/domain-types/host_config/collections/all";
+
         try {
             ResponseEntity<CheckmkHostsResponse> response = restClientService.sendGetRequest(apiUrl, CheckmkHostsResponse.class);
             CheckmkHostsResponse checkmkHostsResponse = response.getBody();
@@ -58,7 +64,30 @@ public class HostService {
         }
     }
 
+    private boolean isHostInDatabase(String hostName) {
+        Optional<Host> existingHost = hostRepository.findById(hostName);
+        return existingHost.isPresent();
+    }
+
+    public void saveSelectedHosts(List<String> selectedHostIds) {
+        List<Host> fetchedHosts = getCheckMkHosts();
+
+        List<Host> selectedHosts = fetchedHosts.stream()
+                .filter(host -> selectedHostIds.contains(host.getHostName()))
+                .map(this::setHostNameAsId)
+                .collect(Collectors.toList());
+
+        hostRepository.saveAll(selectedHosts);
+    }
+
+    private Host setHostNameAsId(Host host) {
+        host.setId(host.getHostName());
+        return host;
+    }
+
     public Host addHost(Host host) throws HostServiceException {
+        host.setId(host.getHostName());
+
         String apiUrl = checkmkConfig.getApiUrl() + "/api/1.0/domain-types/host_config/collections/all";
 
         try {
@@ -138,6 +167,12 @@ public class HostService {
     }
 
     private Host mapToHost(Host host) {
-        return new Host(host.getHostName(), host.getIpAddress(), host.getCreationDate());
+        Host newHost = new Host();
+        newHost.setId(host.getHostName()); // Ensure ID is set to hostName
+        newHost.setHostName(host.getHostName());
+        newHost.setIpAddress(host.getIpAddress());
+        newHost.setCreationDate(host.getCreationDate());
+        newHost.setImported(isHostInDatabase(host.getHostName())); // Set imported flag
+        return newHost;
     }
 }

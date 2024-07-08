@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: commonHead}"></head>
+<title>Host List with Live Info</title>
+<body>
+<div th:replace="~{fragments/nav :: navbar}"></div>
+<div class="container mt-4">
+    <h3>Host List with Live Info</h3>
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th>Host Name</th>
+            <th>IP Address</th>
+            <th>Creation Date</th>
+            <th>Expiration Date</th>
+            <th>Host State</th>
+            <th>Services OK</th>
+            <th>Services Warning</th>
+            <th>Services Critical</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="hostWithLiveInfo : ${combinedHostInfo}">
+            <td th:text="${hostWithLiveInfo.host.hostName}"></td>
+            <td th:text="${hostWithLiveInfo.host.ipAddress}"></td>
+            <td th:text="${hostWithLiveInfo.host.creationDate}"></td>
+            <td th:text="${hostWithLiveInfo.host.expirationDate}"></td>
+            <td th:text="${hostWithLiveInfo.liveInfo.hostState}"></td>
+            <td th:text="${hostWithLiveInfo.liveInfo.serviceOk}"></td>
+            <td th:text="${hostWithLiveInfo.liveInfo.serviceWarning}"></td>
+            <td th:text="${hostWithLiveInfo.liveInfo.serviceCritical}"></td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

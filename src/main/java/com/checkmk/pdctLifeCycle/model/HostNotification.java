@@ -1,9 +1,11 @@
 package com.checkmk.pdctLifeCycle.model;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 
-import java.time.LocalDateTime;
+import java.util.Set;
 
 @Entity
 public class HostNotification {
@@ -13,8 +15,11 @@ public class HostNotification {
 
     private String type;
     private String message;
-    private LocalDateTime createdAt;
+    private String createdAt;
     private String severity;
+
+    @OneToMany(mappedBy = "hostNotification", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<Host> hosts;
 
     //Constructor
 
@@ -54,11 +59,11 @@ public class HostNotification {
         this.message = message;
     }
 
-    public LocalDateTime getCreatedAt() {
+    public String getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
+    public void setCreatedAt(String createdAt) {
         this.createdAt = createdAt;
     }
 

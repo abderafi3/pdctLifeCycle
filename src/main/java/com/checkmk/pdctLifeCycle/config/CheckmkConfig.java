@@ -6,16 +6,16 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class CheckmkConfig {
 
-    @Value("checkmk.api.url")
+    @Value("${checkmk.api.url}")
     private String apiUrl;
 
-    @Value("checkmk.api.username")
+    @Value("${checkmk.api.username}")
     private String apiUsername;
 
-    @Value("checkmk.api.password")
+    @Value("${checkmk.api.password}")
     private String apiPassword;
 
-    @Value("checkmk.api.site")
+    @Value("${checkmk.api.site}")
     private String checkmkSite;
 
     //Getter

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: commonHead}"></head>
+<title>Host List</title>
+<body>
+<div th:replace="~{fragments/nav :: navbar}"></div>
+<div class="container mt-4">
+    <h3>Host List</h3>
+    <button type="button" class="btn btn-primary mb-3" onclick="location.href='/hosts/add'">Add New Host</button>
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th>Host Name</th>
+            <th>IP Address</th>
+            <th>Creation Date</th>
+            <th>Expiration Date</th>
+            <th>Action</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="host : ${hosts}">
+            <td th:text="${host.hostName}"></td>
+            <td th:text="${host.ipAddress}"></td>
+            <td th:text="${host.creationDate}"></td>
+            <td th:text="${host.expirationDate}"></td>
+            <td>
+                <a th:href="@{/hosts/edit/{id}(id=${host.id})}" class="btn btn-secondary btn-sm">Edit</a>
+                <a th:href="@{/hosts/delete/{id}(id=${host.id})}" class="btn btn-danger btn-sm">Delete</a>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: commonHead}"></head>
+<title>Add Host</title>
+<body>
+<div th:replace="~{fragments/nav :: navbar}"></div>
+
+<div class="container mt-4">
+    <h3>Add Host</h3>
+    <form th:action="@{/hosts/add}" th:object="${host}" method="post">
+        <div class="form-group">
+            <label for="hostName">Host Name</label>
+            <input type="text" class="form-control" id="hostName" name="hostName" th:field="*{hostName}" required>
+        </div>
+        <div class="form-group">
+            <label for="ipAddress">IP Address</label>
+            <input type="text" class="form-control" id="ipAddress" name="ipAddress" th:field="*{ipAddress}" required>
+        </div>
+        <div class="form-group">
+            <label for="expDate">Expiration Date</label>
+            <input type="text" class="form-control" id="expDate" name="expDate" th:field="*{expirationDate}">
+        </div>
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a th:href="@{/hosts}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+</body>
+</html>

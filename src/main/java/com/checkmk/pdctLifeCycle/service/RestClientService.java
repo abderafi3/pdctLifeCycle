@@ -23,11 +23,11 @@ public class RestClientService {
     private HttpEntity<String > createHttpEntity(String payload, String eTag){
         String auth = checkmkConfig.getApiUsername() + ":" + checkmkConfig.getApiPassword();
         byte[] encodedAuth = Base64.getEncoder().encode(auth.getBytes(StandardCharsets.US_ASCII));
-        String authHeader = "Basic" + new String(encodedAuth);
+        String authHeader = "Basic " + new String(encodedAuth);
 
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.setContentType(MediaType.APPLICATION_JSON);
-        httpHeaders.set("Authorization", authHeader);
+        httpHeaders.set(HttpHeaders.AUTHORIZATION, authHeader);
         if(eTag != null)
             httpHeaders.set("If-Match", eTag);
         return new HttpEntity<>(payload, httpHeaders);

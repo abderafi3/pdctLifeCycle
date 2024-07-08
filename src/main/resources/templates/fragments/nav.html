@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:fragment="navbar">
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <a class="navbar-brand" href="#">Host Life Cycle Management</a>
+    <div class="collapse navbar-collapse">
+        <ul class="navbar-nav mr-auto">
+            <li class="nav-item"><a class="nav-link" th:href="@{/hosts}">Hosts</a></li>
+            <li class="nav-item"><a class="nav-link" th:href="@{/hosts/import}">Import Hosts</a></li>
+            <li class="nav-item"><a class="nav-link" th:href="@{/signalization}">Signalization</a></li>
+        </ul>
+    </div>
+</nav>
+</body>
+</html>

@@ -25,6 +25,11 @@ public class HostRestController {
         return hostService.getAllHosts();
     }
 
+    @GetMapping("import")
+    public List<Host> getAllCheckmkHosts(){
+        return hostService.getCheckMkHosts();
+    }
+
     @GetMapping("info")
     public List<HostLiveInfo> getAllHostInfo() throws Exception{
         return hostLiveInfoService.convertToHostLiveInfo();

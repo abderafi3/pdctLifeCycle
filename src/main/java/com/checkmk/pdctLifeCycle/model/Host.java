@@ -2,14 +2,12 @@ package com.checkmk.pdctLifeCycle.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.*;
 
 @Entity
 @JsonDeserialize(using = HostDeserializer.class)
 @JsonIgnoreProperties(ignoreUnknown = true)
+@Table(name = "host")
 public class Host {
 
     @Id
@@ -31,26 +29,26 @@ public class Host {
     @JoinColumn(name="user_id")
     private HostUser hostUser;
 
+    @Transient // This field will not be persisted to the database
+    private boolean imported;
 
-    //Constructor
+    // Constructors, getters, and setters
 
-    public Host() {
-    }
+    public Host() {}
 
     public Host(String hostName, String ipAddress) {
         this.hostName = hostName;
         this.ipAddress = ipAddress;
     }
 
-    public Host(String hostName, String ipAddress, String creationDate) {
+    public Host(String id, String hostName, String ipAddress, String creationDate) {
+        this.id = id;
         this.hostName = hostName;
         this.ipAddress = ipAddress;
         this.creationDate = creationDate;
     }
 
-
-    //Getters and Setters
-
+    // Getters and Setters
 
     public String getId() {
         return id;
@@ -106,5 +104,13 @@ public class Host {
 
     public void setHostUser(HostUser hostUser) {
         this.hostUser = hostUser;
+    }
+
+    public boolean isImported() {
+        return imported;
+    }
+
+    public void setImported(boolean imported) {
+        this.imported = imported;
     }
 }
