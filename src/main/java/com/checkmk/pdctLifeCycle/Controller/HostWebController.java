@@ -2,7 +2,9 @@ package com.checkmk.pdctLifeCycle.Controller;
 
 import com.checkmk.pdctLifeCycle.exception.HostServiceException;
 import com.checkmk.pdctLifeCycle.model.Host;
+import com.checkmk.pdctLifeCycle.model.HostLiveInfo;
 import com.checkmk.pdctLifeCycle.model.HostWithLiveInfo;
+import com.checkmk.pdctLifeCycle.service.HostImportService;
 import com.checkmk.pdctLifeCycle.service.HostLiveInfoService;
 import com.checkmk.pdctLifeCycle.service.HostService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,22 +23,36 @@ public class HostWebController {
     private HostService hostService;
 
     @Autowired
+    private HostImportService hostImportService;
+
+    @Autowired
     private HostLiveInfoService hostLiveInfoService;
 
-    @GetMapping
-    public String getAllHosts(Model model) {
-        List<Host> hosts = hostService.getAllHosts();
-        model.addAttribute("hosts", hosts);
-        model.addAttribute("pageTitle", "Host List");
-        return "host/list"; // Maps to src/main/resources/templates/host/list.html
-    }
+//    @Autowired
+//    private UserService userService; // Assuming you have a UserService to fetch users
 
-    @GetMapping("/{id}")
-    public String getHostById(@PathVariable String id, Model model) {
-        Host host = hostService.getHostById(id);
-        model.addAttribute("host", host);
-        model.addAttribute("pageTitle", "Host Details");
-        return "host/detail"; // Maps to src/main/resources/templates/host/detail.html
+    @GetMapping
+    public String getHostsWithLiveInfo(Model model) throws Exception {
+        List<Host> hosts = hostService.getAllHosts();
+        List<HostWithLiveInfo> combinedHostInfo = hosts.stream().map(host -> {
+            HostWithLiveInfo hostWithLiveInfo = new HostWithLiveInfo();
+            hostWithLiveInfo.setHost(host);
+            try {
+                HostLiveInfo liveInfo = hostLiveInfoService.convertToHostLiveInfo().stream()
+                        .filter(info -> info.getHostName().equals(host.getHostName()))
+                        .findFirst()
+                        .orElse(new HostLiveInfo());
+                hostWithLiveInfo.setLiveInfo(liveInfo);
+            } catch (Exception e) {
+                e.printStackTrace();
+                hostWithLiveInfo.setLiveInfo(new HostLiveInfo());
+            }
+            return hostWithLiveInfo;
+        }).collect(Collectors.toList());
+
+        model.addAttribute("combinedHostInfo", combinedHostInfo);
+        model.addAttribute("pageTitle", "Hosts with Live Info");
+        return "host/list"; // Maps to src/main/resources/templates/host/list.html
     }
 
     @GetMapping("/add")
@@ -55,7 +71,9 @@ public class HostWebController {
     @GetMapping("/edit/{id}")
     public String showEditHostForm(@PathVariable String id, Model model) {
         Host host = hostService.getHostById(id);
+        //List<User> users = userService.getAllUsers(); // Fetch all users
         model.addAttribute("host", host);
+        //model.addAttribute("users", users);
         model.addAttribute("pageTitle", "Edit Host");
         return "host/edit"; // Maps to src/main/resources/templates/host/edit.html
     }
@@ -73,32 +91,11 @@ public class HostWebController {
         return "redirect:/hosts";
     }
 
-    @GetMapping("/info")
-    public String getHostsWithLiveInfo(Model model) throws Exception {
-        List<Host> hosts = hostService.getAllHosts();
-        List<HostWithLiveInfo> combinedHostInfo = hosts.stream().map(host -> {
-            HostWithLiveInfo hostWithLiveInfo = new HostWithLiveInfo();
-            hostWithLiveInfo.setHost(host);
-            try {
-                hostWithLiveInfo.setLiveInfo(hostLiveInfoService.convertToHostLiveInfo().stream()
-                        .filter(info -> info.getHostName().equals(host.getHostName()))
-                        .findFirst()
-                        .orElse(null));
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return hostWithLiveInfo;
-        }).collect(Collectors.toList());
-
-        model.addAttribute("combinedHostInfo", combinedHostInfo);
-        model.addAttribute("pageTitle", "Hosts with Live Info");
-        return "host/host-list"; // Maps to src/main/resources/templates/host/host-list.html
-    }
 
     @GetMapping("/import")
     public String importHosts(Model model) {
-        List<Host> checkmkHosts = hostService.getCheckMkHosts();
-        List<Host> dbHosts = hostService.getAllHosts();
+        List<Host> checkmkHosts = hostImportService.getCheckMkHosts();
+        List<Host> dbHosts = (List<Host>) hostService.getAllHosts();
         model.addAttribute("checkmkHosts", checkmkHosts);
         model.addAttribute("dbHosts", dbHosts);
         model.addAttribute("pageTitle", "Import Hosts");
@@ -107,7 +104,7 @@ public class HostWebController {
 
     @PostMapping("/import")
     public String saveImportedHosts(@RequestParam("selectedHostIds") List<String> selectedHostIds, Model model) {
-        hostService.saveSelectedHosts(selectedHostIds);
+        hostImportService.saveSelectedHosts(selectedHostIds);
         model.addAttribute("message", "Hosts imported successfully");
         return "redirect:/hosts/import";
     }

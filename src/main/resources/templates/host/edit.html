@@ -6,6 +6,7 @@
 <div th:replace="~{fragments/nav :: navbar}"></div>
 <div class="container mt-4">
     <h3>Update Host</h3>
+    <!-- Ensure the form action correctly points to the update endpoint with the host's name -->
     <form th:action="@{|/hosts/edit/${host.hostName}|}" method="post">
         <div class="form-group">
             <label for="hostName">Host Name</label>
@@ -16,12 +17,12 @@
             <input type="text" class="form-control" id="ipAddress" name="ipAddress" th:value="${host.ipAddress}" required>
         </div>
         <div class="form-group">
-            <label for="expDate">Expiration Date</label>
-            <input type="text" class="form-control" id="expDate" name="expDate" th:value="${host.expDate}">
+            <label for="expirationDate">Expiration Date</label>
+            <input type="text" class="form-control" id="expirationDate" name="expirationDate" th:value="${host.expirationDate}">
         </div>
         <div class="form-group">
             <label for="user">Reassign User</label>
-            <select class="form-control" id="user" name="user" required>
+            <select class="form-control" id="user" name="user">
                 <option th:each="user : ${users}" th:value="${user.username}" th:text="${user.firstName + ' ' + user.lastName}"></option>
             </select>
         </div>

@@ -2,7 +2,6 @@ package com.checkmk.pdctLifeCycle.service;
 
 import com.checkmk.pdctLifeCycle.config.CheckmkConfig;
 import com.checkmk.pdctLifeCycle.exception.HostServiceException;
-import com.checkmk.pdctLifeCycle.model.CheckmkHostsResponse;
 import com.checkmk.pdctLifeCycle.model.Host;
 import com.checkmk.pdctLifeCycle.repository.HostRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,8 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 public class HostService {
@@ -41,48 +38,6 @@ public class HostService {
 
     public Host getHostById(String id) {
         return hostRepository.findById(id).orElse(null);
-    }
-
-    public Host getCheckMkHostById(String id) {
-        return getCheckMkHosts().stream().filter(host -> host.getId().equals(id)).findFirst().orElse(null);
-    }
-
-    public List<Host> getCheckMkHosts() {
-        String apiUrl = checkmkConfig.getApiUrl() + "/api/1.0/domain-types/host_config/collections/all";
-
-        try {
-            ResponseEntity<CheckmkHostsResponse> response = restClientService.sendGetRequest(apiUrl, CheckmkHostsResponse.class);
-            CheckmkHostsResponse checkmkHostsResponse = response.getBody();
-            List<Host> hosts = checkmkHostsResponse != null ? checkmkHostsResponse.getHosts() : List.of();
-
-            return hosts.stream()
-                    .map(this::mapToHost)
-                    .collect(Collectors.toList());
-        } catch (Exception e) {
-            logger.error("Failed to fetch hosts from Checkmk", e);
-            return List.of();
-        }
-    }
-
-    private boolean isHostInDatabase(String hostName) {
-        Optional<Host> existingHost = hostRepository.findById(hostName);
-        return existingHost.isPresent();
-    }
-
-    public void saveSelectedHosts(List<String> selectedHostIds) {
-        List<Host> fetchedHosts = getCheckMkHosts();
-
-        List<Host> selectedHosts = fetchedHosts.stream()
-                .filter(host -> selectedHostIds.contains(host.getHostName()))
-                .map(this::setHostNameAsId)
-                .collect(Collectors.toList());
-
-        hostRepository.saveAll(selectedHosts);
-    }
-
-    private Host setHostNameAsId(Host host) {
-        host.setId(host.getHostName());
-        return host;
     }
 
     public Host addHost(Host host) throws HostServiceException {
@@ -115,33 +70,43 @@ public class HostService {
     public Host updateHost(Host host) throws HostServiceException {
         try {
             Host existingHost = getHostById(host.getId());
-            if (existingHost != null) {
-                String apiUrl = checkmkConfig.getApiUrl() + "/api/1.0/objects/host_config/" + host.getHostName();
-
-                // Payload
-                ObjectNode payload = objectMapper.createObjectNode();
-                ObjectNode attributes = objectMapper.createObjectNode();
-                attributes.put("ipaddress", host.getIpAddress());
-                payload.set("attributes", attributes);
-
-                restClientService.sendPutRequest(apiUrl, payload.toString(), restClientService.getEtag(apiUrl));
-                this.checkmkActivateChanges();
-                return hostRepository.save(host);
-            } else {
+            if (existingHost == null) {
                 throw new HostServiceException("Host not found");
             }
+
+            String hostName = existingHost.getHostName();
+
+            String apiUrl = checkmkConfig.getApiUrl() + "/api/1.0/objects/host_config/" + hostName;
+
+            // Payload
+            ObjectNode payload = objectMapper.createObjectNode();
+            ObjectNode attributes = objectMapper.createObjectNode();
+            attributes.put("ipaddress", host.getIpAddress());
+            payload.set("attributes", attributes);
+
+            // Fetch ETag
+            String eTag = getHostETag(hostName);
+
+            // Update host in Checkmk
+            restClientService.sendPutRequest(apiUrl, payload.toString(), eTag);
+            this.checkmkActivateChanges();
+
+            // Save host in the database
+            host.setHostName(hostName); // Ensure the host name is set
+            return hostRepository.save(host);
         } catch (Exception e) {
-            logger.error("Couldn't update the host", e);
             throw new HostServiceException("Couldn't update the host", e);
         }
     }
 
     public void deleteHost(String id) throws HostServiceException {
         try {
-            Host host = this.getHostById(id);
+            Host host = getHostById(id);
             if (host != null) {
+                // Fetch ETag
+                String eTag = getHostETag(host.getHostName());
                 String apiUrl = checkmkConfig.getApiUrl() + "/api/1.0/objects/host_config/" + host.getHostName();
-                restClientService.sendDeleteRequest(apiUrl, restClientService.getEtag(apiUrl));
+                restClientService.sendDeleteRequest(apiUrl, eTag);
                 this.checkmkActivateChanges();
                 hostRepository.delete(host);
             } else {
@@ -166,13 +131,18 @@ public class HostService {
         restClientService.sendPostRequest(apiUrl, payload.toString());
     }
 
-    private Host mapToHost(Host host) {
-        Host newHost = new Host();
-        newHost.setId(host.getHostName()); // Ensure ID is set to hostName
-        newHost.setHostName(host.getHostName());
-        newHost.setIpAddress(host.getIpAddress());
-        newHost.setCreationDate(host.getCreationDate());
-        newHost.setImported(isHostInDatabase(host.getHostName())); // Set imported flag
-        return newHost;
+    public String getHostETag(String hostName) {
+        String url = checkmkConfig.getApiUrl() + "/api/1.0/objects/host_config/" + hostName;
+        return restClientService.getEtag(url);
+    }
+
+    private boolean hostExistsInCheckmk(String hostName) {
+        try {
+            String url = checkmkConfig.getApiUrl() + "/api/1.0/objects/host_config/" + hostName;
+            ResponseEntity<String> response = restClientService.sendGetRequest(url, String.class);
+            return response.getStatusCode().is2xxSuccessful();
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

@@ -14,7 +14,6 @@
                 <th>Host Name</th>
                 <th>IP Address</th>
                 <th>Creation Date</th>
-                <th>Status</th>
             </tr>
             </thead>
             <tbody>
@@ -23,7 +22,6 @@
                 <td th:text="${host.hostName}"></td>
                 <td th:text="${host.ipAddress}"></td>
                 <td th:text="${host.creationDate}"></td>
-                <td th:text="${host.imported ? 'Imported' : 'Not Imported'}"></td>
             </tr>
             </tbody>
         </table>

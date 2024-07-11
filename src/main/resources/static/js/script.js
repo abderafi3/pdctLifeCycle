@@ -11,18 +11,19 @@ function toggleSelectAll(source) {
     }
 }
 
-
+// Host Deletion Modal
 
 function editHost(id) {
     window.location.href = '/hosts/edit/' + id;
 }
 
 function confirmDeleteHost(id) {
-    $('#confirmDeleteButton').data('id', id);
-    $('#deleteConfirmModal').modal('show');
+    document.getElementById('confirmDeleteButton').setAttribute('data-id', id);
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+    deleteModal.show();
 }
 
 function deleteHost() {
-    var id = $('#confirmDeleteButton').data('id');
+    const id = document.getElementById('confirmDeleteButton').getAttribute('data-id');
     window.location.href = '/hosts/delete/' + id;
 }

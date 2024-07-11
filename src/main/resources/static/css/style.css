@@ -5,3 +5,22 @@ body {
 .badge-danger {
 color: red;
 }
+
+
+/* Navbar styling */
+        .navbar {
+            margin-bottom: 20px;
+            background-color: #343a40 !important;
+            padding: 0.5rem 1rem;
+            box-shadow: 0 4px 4px 0 rgba(0, 0, 0, .2);
+        }
+
+        .navbar-brand, .nav-link {
+            color: #ffffff !important;
+            margin-right: 10px;
+        }
+
+        .navbar-brand:hover, .nav-link:hover {
+            color: #f0ad4e !important;
+        }
+

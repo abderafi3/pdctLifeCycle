@@ -20,17 +20,19 @@ public class RestClientService {
         this.restTemplate = restTemplate;
     }
 
-    private HttpEntity<String > createHttpEntity(String payload, String eTag){
+    private HttpEntity<String> createHttpEntity(String payload, String eTag) {
         String auth = checkmkConfig.getApiUsername() + ":" + checkmkConfig.getApiPassword();
         byte[] encodedAuth = Base64.getEncoder().encode(auth.getBytes(StandardCharsets.US_ASCII));
         String authHeader = "Basic " + new String(encodedAuth);
 
-        HttpHeaders httpHeaders = new HttpHeaders();
-        httpHeaders.setContentType(MediaType.APPLICATION_JSON);
-        httpHeaders.set(HttpHeaders.AUTHORIZATION, authHeader);
-        if(eTag != null)
-            httpHeaders.set("If-Match", eTag);
-        return new HttpEntity<>(payload, httpHeaders);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", authHeader);
+        if (eTag != null) {
+            headers.set("If-Match", eTag);
+        }
+
+        return new HttpEntity<>(payload, headers);
     }
 
     public <T> ResponseEntity<T> sendGetRequest(String url, Class<T> responseType){
@@ -38,9 +40,8 @@ public class RestClientService {
         return restTemplate.exchange(url, HttpMethod.GET, entity, responseType);
     }
 
-
     public ResponseEntity<String> sendPostRequest(String url, String payload){
-        HttpEntity<String> entity = createHttpEntity(payload, null);
+        HttpEntity<String> entity = createHttpEntity(payload, "*");
         return restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
     }
 
