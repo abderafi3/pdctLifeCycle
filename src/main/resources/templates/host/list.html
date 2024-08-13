@@ -26,7 +26,7 @@
             <td th:text="${hostWithLiveInfo.host.hostName}"></td>
             <td th:text="${hostWithLiveInfo.host.ipAddress}"></td>
             <td th:text="${hostWithLiveInfo.host.creationDate}"></td>
-            <td th:text="${hostWithLiveInfo.host.expirationDate != null ? hostWithLiveInfo.host.expirationDate : 'None'}"></td>
+            <td th:text="${hostWithLiveInfo.host.expirationDate != null && !#strings.isEmpty(hostWithLiveInfo.host.expirationDate) ? hostWithLiveInfo.host.expirationDate : 'None'}"></td>
             <td th:text="${hostWithLiveInfo.liveInfo.hostState}"></td>
             <td th:text="${hostWithLiveInfo.liveInfo.serviceOk}"></td>
             <td th:text="${hostWithLiveInfo.liveInfo.serviceWarning}"></td>
