@@ -29,7 +29,7 @@ public class HostWebController {
     private HostLiveInfoService hostLiveInfoService;
 
 //    @Autowired
-//    private UserService userService; // Assuming you have a UserService to fetch users
+//    private UserService userService; // UserService to fetch users
 
     @GetMapping
     public String getHostsWithLiveInfo(Model model) throws Exception {

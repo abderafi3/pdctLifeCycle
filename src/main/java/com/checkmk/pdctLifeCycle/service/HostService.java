@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -60,6 +61,7 @@ public class HostService {
             this.checkmkActivateChanges();
 
             // Save in Database
+            host.setCreationDate(LocalDate.now().toString());
             return hostRepository.save(host);
         } catch (Exception e) {
             logger.error("Couldn't add a new host", e);
@@ -92,7 +94,8 @@ public class HostService {
             this.checkmkActivateChanges();
 
             // Save host in the database
-            host.setHostName(hostName); // Ensure the host name is set
+            host.setHostName(hostName);// Ensure the host name is set
+            host.setCreationDate(existingHost.getCreationDate());
             return hostRepository.save(host);
         } catch (Exception e) {
             throw new HostServiceException("Couldn't update the host", e);

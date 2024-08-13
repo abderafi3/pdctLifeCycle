@@ -35,6 +35,6 @@ return host;
 
     private String formatDateTime(String isoDateTime) {
         ZonedDateTime zonedDateTime = ZonedDateTime.parse(isoDateTime);
-        return zonedDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        return zonedDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
     }
 }

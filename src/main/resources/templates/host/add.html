@@ -18,7 +18,7 @@
         </div>
         <div class="form-group">
             <label for="expirationDate">Expiration Date</label>
-            <input type="text" class="form-control" id="expirationDate" name="expDate" th:field="*{expirationDate}">
+            <input type="date" class="form-control" id="expirationDate" name="expDate" th:field="*{expirationDate}">
         </div>
         <button type="submit" class="btn btn-primary">Save</button>
         <a th:href="@{/hosts}" class="btn btn-secondary">Cancel</a>

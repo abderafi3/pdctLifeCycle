@@ -17,8 +17,12 @@
             <input type="text" class="form-control" id="ipAddress" name="ipAddress" th:value="${host.ipAddress}" required>
         </div>
         <div class="form-group">
+            <label for="creationDate">Creation Date</label>
+            <input type="text" class="form-control" id="creationDate" name="creationDate" th:value="${host.creationDate}" disabled>
+        </div>
+        <div class="form-group">
             <label for="expirationDate">Expiration Date</label>
-            <input type="text" class="form-control" id="expirationDate" name="expirationDate" th:value="${host.expirationDate}">
+            <input type="date" class="form-control" id="expirationDate" name="expirationDate" th:value="${host.expirationDate}">
         </div>
         <div class="form-group">
             <label for="user">Reassign User</label>
