@@ -26,12 +26,14 @@
         <tr th:each="hostWithLiveInfo : ${combinedHostInfo}">
             <td th:text="${hostWithLiveInfo.host.hostName}"></td>
             <td>
-                <span th:if="${hostWithLiveInfo.host.hostUser != null}">
-                    <a href="#" th:data-email="${hostWithLiveInfo.host.hostUser.email}"
-                       th:data-firstname="${hostWithLiveInfo.host.hostUser.firstName}"
-                       th:data-lastname="${hostWithLiveInfo.host.hostUser.lastName}"
-                       onclick="showNotificationModal(this)" th:text="${hostWithLiveInfo.host.hostUser.firstName + ' ' + hostWithLiveInfo.host.hostUser.lastName}"></a>
-                </span>
+    <span th:if="${hostWithLiveInfo.host.hostUser != null}">
+        <a href="#" th:data-email="${hostWithLiveInfo.host.hostUser.email}"
+           th:data-firstname="${hostWithLiveInfo.host.hostUser.firstName}"
+           th:data-lastname="${hostWithLiveInfo.host.hostUser.lastName}"
+           onclick="showNotificationModal(this)"
+           th:text="${hostWithLiveInfo.host.hostUser.firstName + ' ' + hostWithLiveInfo.host.hostUser.lastName}"
+           title="Click here to send a notification"></a>
+    </span>
                 <span th:if="${hostWithLiveInfo.host.hostUser == null}">None</span>
             </td>
             <td th:text="${hostWithLiveInfo.host.ipAddress}"></td>
