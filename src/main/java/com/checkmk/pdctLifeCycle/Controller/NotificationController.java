@@ -1,5 +1,7 @@
 package com.checkmk.pdctLifeCycle.Controller;
 
+import com.checkmk.pdctLifeCycle.service.NotificationService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -10,8 +12,8 @@ import java.util.Map;
 @Controller
 public class NotificationController {
 
-//    @Autowired
-//    private JavaMailSender mailSender;
+    @Autowired
+    private NotificationService notificationService;
 
     @PostMapping("/sendNotification")
     @ResponseBody
@@ -21,16 +23,8 @@ public class NotificationController {
             String title = payload.get("title");
             String message = payload.get("message");
 
-//            // Prepare the email
-//            SimpleMailMessage mailMessage = new SimpleMailMessage();
-//            mailMessage.setTo(email);
-//            mailMessage.setSubject(title);
-//            mailMessage.setText(message);
-//
-//            // Send the email
-//            mailSender.send(mailMessage);
-
-            return "Notification sent successfully!";
+            // Use the NotificationService to send the email
+            return notificationService.sendManualNotification(email, title, message);
         } catch (Exception e) {
             e.printStackTrace();
             return "Failed to send notification.";

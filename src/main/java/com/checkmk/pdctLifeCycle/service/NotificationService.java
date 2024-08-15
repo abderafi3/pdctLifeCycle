@@ -1,96 +1,162 @@
 package com.checkmk.pdctLifeCycle.service;
 
-import com.checkmk.pdctLifeCycle.config.CheckmkConfig;
-import com.checkmk.pdctLifeCycle.model.HostNotification;
-import com.checkmk.pdctLifeCycle.repository.NotificationRepository;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.checkmk.pdctLifeCycle.model.Host;
+import com.checkmk.pdctLifeCycle.model.HostLiveInfo;
+import com.checkmk.pdctLifeCycle.model.HostUser;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class NotificationService {
 
-    private static final Logger logger = LoggerFactory.getLogger(HostService.class);
+    @Autowired
+    private HostService hostService;
 
-        private final NotificationRepository notificationRepository;
-        private final CheckmkConfig checkmkConfig;
-        private final RestClientService restClientService;
+    @Autowired
+    private HostLiveInfoService hostLiveInfoService;
 
-        @Autowired
-        public NotificationService(NotificationRepository notificationRepository, CheckmkConfig checkmkConfig, RestClientService restClientService) {
-            this.notificationRepository = notificationRepository;
-            this.checkmkConfig = checkmkConfig;
-            this.restClientService = restClientService;
+    @Autowired
+    private JavaMailSender mailSender;
+
+
+    private final String fromName = "Host Management Team";
+    private final String fromEmail = "hostManagementTeam@asagno.com";
+
+
+    // Store last known number of critical services for each host
+    private final Map<String, Integer> criticalServiceCountMap = new ConcurrentHashMap<>();
+
+    @Scheduled(cron = "0 0 6 * * ?") // Run every day at 06:00 AM
+    public void checkForExpiringHosts() {
+        LocalDate today = LocalDate.now();
+        LocalDate threeDaysFromNow = today.plusDays(3);
+        LocalDate oneDayFromNow = today.plusDays(1);
+
+        // Fetch all hosts
+        List<Host> hosts = hostService.getAllHosts();
+
+        // Loop through hosts and check if they are expiring soon
+        for (Host host : hosts) {
+            try {
+                // Ensure the expiration date is not null or empty
+                String expirationDateString = host.getExpirationDate();
+                if (expirationDateString == null || expirationDateString.trim().isEmpty()) {
+                    continue;
+                }
+
+                LocalDate expirationDate = LocalDate.parse(expirationDateString);
+
+                // Send notification if 3 days or less before expiration
+                if (!expirationDate.isAfter(threeDaysFromNow)) {
+                    int daysRemaining = (int) java.time.temporal.ChronoUnit.DAYS.between(today, expirationDate);
+                    sendExpirationWarning(host, daysRemaining);
+                }
+            } catch (DateTimeParseException e) {
+                System.out.println("Failed to parse expiration date for host " + host.getHostName() + ": " + e.getMessage());
+
+            }
         }
+    }
 
-        public List<HostNotification> getAllHostNotifications() {
-            return notificationRepository.findAll();
-        }
+    // Schedule critical service check every 5 minutes
+    @Scheduled(fixedRate = 300000) // Run every 5 minutes
+    public void checkForIncreasedCriticalServices() throws Exception {
+        // Fetch all hosts
+        List<Host> hosts = hostService.getAllHosts();
 
-        public HostNotification getHostNotificationById(String id) {
-            return notificationRepository.findById(id).orElse(null);
-        }
+        // Loop through hosts and check their live info
+        for (Host host : hosts) {
+            HostLiveInfo liveInfo = hostLiveInfoService.getLiveInfoForHost(host.getHostName());
 
-        public HostNotification saveNotification(HostNotification hostNotification) {
-            return notificationRepository.save(hostNotification);
-        }
+            if (liveInfo != null) {
+                int currentCriticalServices = Integer.parseInt(liveInfo.getServiceCritical());
 
-        public void deleteNotification(String id) {
-            notificationRepository.deleteById(id);
-        }
+                // Get the last known critical service count (defaults to 0 if not present)
+                int lastKnownCriticalServices = criticalServiceCountMap.getOrDefault(host.getHostName(), 0);
 
-    public List<HostNotification> fetchNotificationsFromCheckmk() throws IOException {
-        String apiUrl = checkmkConfig.getApiUrl() + "/view.py?output_format=json_export&view_name=notifications";
-        ResponseEntity<String> response = restClientService.sendGetRequest(apiUrl, String.class);
+                // Check if the number of critical services has increased
+                if (currentCriticalServices > lastKnownCriticalServices) {
+                    // Send notification to the user
+                    sendCriticalServiceNotification(host, lastKnownCriticalServices, currentCriticalServices);
 
-        ObjectMapper mapper = new ObjectMapper();
-        JsonNode rootNode = mapper.readTree(response.getBody());
-
-        List<HostNotification> notifications = new ArrayList<>();
-        Iterator<JsonNode> elements = rootNode.elements();
-
-        // Read the headers
-        JsonNode headersNode = elements.next();
-        List<String> headers = new ArrayList<>();
-        headersNode.forEach(header -> headers.add(header.asText()));
-
-        // Process the data
-        while (elements.hasNext()) {
-            JsonNode node = elements.next();
-            HostNotification notification = new HostNotification();
-            for (int i = 0; i < headers.size(); i++) {
-                String header = headers.get(i);
-                JsonNode valueNode = node.get(i);
-
-                switch (header) {
-                    case "log_type":
-                        notification.setType(valueNode.asText());
-                        break;
-                    case "log_plugin_output":
-                        notification.setMessage(valueNode.asText());
-                        break;
-                    case "log_time":
-                        notification.setCreatedAt(valueNode.asText());
-                        break;
-                    case "log_state":
-                        notification.setSeverity(valueNode.asText());
-                        break;
-                    default:
-                        // Handle other headers if needed
-                        break;
+                    // Update the last known critical services count
+                    criticalServiceCountMap.put(host.getHostName(), currentCriticalServices);
                 }
             }
-            notifications.add(notification);
         }
-        return notifications;
+    }
+
+    private void sendExpirationWarning(Host host, int daysRemaining) {
+        HostUser user = host.getHostUser();
+
+        if (user != null && daysRemaining >= 0) {
+            // Construct email message
+            String subject = "Host Expiration Warning: " + host.getHostName();
+            String message = "Dear " + user.getFirstName() + ",<br><br>" +
+                    "Your host <b>" + host.getHostName() + "</b> will expire in <b>" + daysRemaining + "</b> day(s).<br>" +
+                    "Please take the necessary action.<br><br>" +
+                    "Best regards,<br>" +
+                    "Host Management Team";
+
+            // Send email
+            sendEmail(user.getEmail(), subject, message);
+        }
+    }
+
+    private void sendCriticalServiceNotification(Host host, int oldCount, int newCount) {
+        HostUser user = host.getHostUser();
+
+        if (user != null) {
+            // Construct email message
+            String subject = "Critical Service Alert for Host: " + host.getHostName();
+            String message = "Dear " + user.getFirstName() + ",<br><br>" +
+                    "The number of critical services for your host <b>" + host.getHostName() + "</b> has increased.<br>" +
+                    "Previous count: <b>" + oldCount + "</b><br>" +
+                    "Current count: <b>" + newCount + "</b><br><br>" +
+                    "Please check the host and resolve the issues.<br><br>" +
+                    "Best regards,<br>" +
+                    "Host Management Team";
+
+            // Send email
+            sendEmail(user.getEmail(), subject, message);
+        }
+    }
+
+    public void sendEmail(String to, String subject, String text) {
+        MimeMessage message = mailSender.createMimeMessage();
+        try {
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+            helper.setFrom(fromName + " <" + fromEmail + ">");
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(text, true);
+
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    // sending manual notifications
+    public String sendManualNotification(String email, String title, String messageBody) {
+        try {
+            sendEmail(email, title, messageBody);
+            return "Notification sent successfully!";
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Failed to send notification.";
+        }
     }
 }
