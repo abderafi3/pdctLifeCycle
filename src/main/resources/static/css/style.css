@@ -26,3 +26,93 @@ color: red;
             margin-bottom: 10px;
 }
 
+/* General Table Styling */
+.table-container {
+    margin: 20px auto;
+    width: 95%;
+}
+
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+th, td {
+    padding: 10px !important;
+    text-align: center;
+    border: 1px solid #ddd;
+    font-size: 15px !important;
+}
+
+/* Header Styles */
+th {
+    background-color: #4A4A4A !important;
+    color: white;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+/* Row and Column Styles */
+tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+/* Status Columns */
+.status-up {
+    color: green !important;
+    font-weight: bold;
+}
+
+.status-down {
+    color: red !important;
+    font-weight: bold;
+}
+
+.status-unknown {
+    color: orange;
+    font-weight: bold;
+}
+
+/* Service Columns */
+.ok-col {
+    background-color: #179107 !important;
+    font-weight: bold;
+}
+
+.warn-col {
+    background-color: #C47128 !important;
+    font-weight: bold;
+}
+
+.crit-col {
+    background-color: #CE0000 !important;
+    font-weight: bold;
+}
+
+/* Action Buttons */
+.action-buttons .btn {
+    padding: 6px 12px;
+    font-size: 13px;
+    margin-right: 5px;
+    border-radius: 5px;
+}
+
+.btn-update {
+    background-color: #007BFF;
+    color: white;
+    border: none;
+}
+
+.btn-delete {
+    background-color: #CE0000;
+    color: white;
+    border: none;
+}
+
+a {
+  text-decoration: none !important;
+}
+

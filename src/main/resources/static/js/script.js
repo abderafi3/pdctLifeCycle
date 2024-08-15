@@ -27,3 +27,40 @@ function deleteHost() {
     const id = document.getElementById('confirmDeleteButton').getAttribute('data-id');
     window.location.href = '/hosts/delete/' + id;
 }
+
+
+// Notification Modal
+
+function showNotificationModal(element) {
+    const email = element.getAttribute('data-email');
+
+    document.getElementById('userEmail').value = email;
+    document.getElementById('notificationTitle').value = '';
+    document.getElementById('notificationMessage').value = '';
+
+    const notificationModal = new bootstrap.Modal(document.getElementById('notificationModal'), {});
+    notificationModal.show();
+}
+
+function sendNotification() {
+    const email = document.getElementById('userEmail').value;
+    const title = document.getElementById('notificationTitle').value;
+    const message = document.getElementById('notificationMessage').value;
+
+    fetch('/sendNotification', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, title, message })
+    }).then(response => {
+        if (response.ok) {
+            alert('Notification sent successfully!');
+            const notificationModal = bootstrap.Modal.getInstance(document.getElementById('notificationModal'));
+            notificationModal.hide();
+        } else {
+            alert('Failed to send notification.');
+        }
+    });
+}
+
