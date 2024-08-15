@@ -38,7 +38,7 @@ public class NotificationService {
     private final String fromName = "Host Management Team";
     private final String fromEmail = "hostManagementTeam@asagno.com";
 
-    // Store last known number of critical services for each host
+    // Store the last known number of critical services for each host
     private final Map<String, Integer> criticalServiceCountMap = new ConcurrentHashMap<>();
 
     public List<HostNotification> getUnreadNotifications(HostUser user) {
@@ -71,13 +71,10 @@ public class NotificationService {
         LocalDate threeDaysFromNow = today.plusDays(3);
         LocalDate oneDayFromNow = today.plusDays(1);
 
-        // Fetch all hosts
         List<Host> hosts = hostService.getAllHosts();
 
-        // Loop through hosts and check if they are expiring soon
         for (Host host : hosts) {
             try {
-                // Ensure the expiration date is not null or empty
                 String expirationDateString = host.getExpirationDate();
                 if (expirationDateString == null || expirationDateString.trim().isEmpty()) {
                     continue;
@@ -85,7 +82,6 @@ public class NotificationService {
 
                 LocalDate expirationDate = LocalDate.parse(expirationDateString);
 
-                // Send notification if 3 days or less before expiration
                 if (!expirationDate.isAfter(threeDaysFromNow)) {
                     int daysRemaining = (int) java.time.temporal.ChronoUnit.DAYS.between(today, expirationDate);
                     sendExpirationWarning(host, daysRemaining);
@@ -96,28 +92,20 @@ public class NotificationService {
         }
     }
 
-    // Schedule critical service check every 5 minutes
     @Scheduled(fixedRate = 300000) // Run every 5 minutes
     public void checkForIncreasedCriticalServices() throws Exception {
-        // Fetch all hosts
         List<Host> hosts = hostService.getAllHosts();
 
-        // Loop through hosts and check their live info
         for (Host host : hosts) {
             HostLiveInfo liveInfo = hostLiveInfoService.getLiveInfoForHost(host.getHostName());
 
             if (liveInfo != null) {
                 int currentCriticalServices = Integer.parseInt(liveInfo.getServiceCritical());
 
-                // Get the last known critical service count (defaults to 0 if not present)
                 int lastKnownCriticalServices = criticalServiceCountMap.getOrDefault(host.getHostName(), 0);
 
-                // Check if the number of critical services has increased
                 if (currentCriticalServices > lastKnownCriticalServices) {
-                    // Send notification to the user
                     sendCriticalServiceNotification(host, lastKnownCriticalServices, currentCriticalServices);
-
-                    // Update the last known critical services count
                     criticalServiceCountMap.put(host.getHostName(), currentCriticalServices);
                 }
             }
@@ -128,18 +116,12 @@ public class NotificationService {
         HostUser user = host.getHostUser();
 
         if (user != null && daysRemaining >= 0) {
-            // Construct email message
             String subject = "Host Expiration Warning: " + host.getHostName();
-            String message = "Dear " + user.getFirstName() + ",<br><br>" +
-                    "Your host <b>" + host.getHostName() + "</b> will expire in <b>" + daysRemaining + "</b> day(s).<br>" +
-                    "Please take the necessary action.<br><br>" +
-                    "Best regards,<br>" +
-                    "Host Management Team";
+            String message = String.format("Dear %s,<br><br>Your host <b>%s</b> will expire in <b>%d</b> day(s).<br>" +
+                            "Please take the necessary action.<br><br>Best regards,<br>Host Management Team",
+                    user.getFirstName(), host.getHostName(), daysRemaining);
 
-            // Send email
             sendEmail(user.getEmail(), subject, message);
-
-            // Save notification in the database
             createNotification(user, subject, message);
         }
     }
@@ -148,20 +130,13 @@ public class NotificationService {
         HostUser user = host.getHostUser();
 
         if (user != null) {
-            // Construct email message
             String subject = "Critical Service Alert for Host: " + host.getHostName();
-            String message = "Dear " + user.getFirstName() + ",<br><br>" +
-                    "The number of critical services for your host <b>" + host.getHostName() + "</b> has increased.<br>" +
-                    "Previous count: <b>" + oldCount + "</b><br>" +
-                    "Current count: <b>" + newCount + "</b><br><br>" +
-                    "Please check the host and resolve the issues.<br><br>" +
-                    "Best regards,<br>" +
-                    "Host Management Team";
+            String message = String.format("Dear %s,<br><br>The number of critical services for your host <b>%s</b> has increased.<br>" +
+                            "Previous count: <b>%d</b><br>Current count: <b>%d</b><br><br>" +
+                            "Please check the host and resolve the issues.<br><br>Best regards,<br>Host Management Team",
+                    user.getFirstName(), host.getHostName(), oldCount, newCount);
 
-            // Send email
             sendEmail(user.getEmail(), subject, message);
-
-            // Save notification in the database
             createNotification(user, subject, message);
         }
     }
@@ -185,7 +160,7 @@ public class NotificationService {
     public String sendManualNotification(String email, String title, String messageBody, HostUser user) {
         try {
             sendEmail(email, title, messageBody);
-            createNotification(user, title, messageBody); // Store the manual notification
+            createNotification(user, title, messageBody);
             return "Notification sent and stored successfully!";
         } catch (Exception e) {
             e.printStackTrace();

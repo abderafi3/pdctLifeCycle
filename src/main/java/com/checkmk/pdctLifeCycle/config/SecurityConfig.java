@@ -21,8 +21,8 @@ public class SecurityConfig {
         http
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/login", "/register", "/error", "/css/**", "/js/**").permitAll() // Allow access to login, error, and resources
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/user/**").hasRole("USER")
+                        .requestMatchers("/hosts/add", "/hosts/edit/**", "/hosts/delete/**", "/hosts/import").hasRole("ADMIN")  // Admin only routes
+                        .requestMatchers("/hosts").authenticated()  // All authenticated users can access /hosts
                         .anyRequest().authenticated() // All other URLs require authentication
                 )
                 .formLogin(form -> form

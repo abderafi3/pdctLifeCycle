@@ -6,7 +6,10 @@
 <div th:replace="~{fragments/nav :: navbar}"></div>
 <div class="table-container">
     <h3>Hosts</h3>
-    <button type="button" class="btn btn-primary mb-3" onclick="location.href='/hosts/add'">Add new Host</button>
+
+    <!-- Add New Host Button - Only for Admin -->
+    <button type="button" class="btn btn-primary mb-3" onclick="location.href='/hosts/add'" th:if="${#authorization.expression('hasRole(''ADMIN'')')}">Add new Host</button>
+
     <table class="table table-striped">
         <thead>
         <tr>
@@ -19,21 +22,22 @@
             <th class="ok-col">Services OK</th>
             <th class="warn-col">Services Warning</th>
             <th class="crit-col">Services Critical</th>
-            <th>Action</th>
+            <!-- Action Column only for Admins -->
+            <th th:if="${#authorization.expression('hasRole(''ADMIN'')')}">Action</th>
         </tr>
         </thead>
         <tbody>
         <tr th:each="hostWithLiveInfo : ${combinedHostInfo}">
             <td th:text="${hostWithLiveInfo.host.hostName}"></td>
             <td>
-    <span th:if="${hostWithLiveInfo.host.hostUser != null}">
-        <a href="#" th:data-email="${hostWithLiveInfo.host.hostUser.email}"
-           th:data-firstname="${hostWithLiveInfo.host.hostUser.firstName}"
-           th:data-lastname="${hostWithLiveInfo.host.hostUser.lastName}"
-           onclick="showNotificationModal(this)"
-           th:text="${hostWithLiveInfo.host.hostUser.firstName + ' ' + hostWithLiveInfo.host.hostUser.lastName}"
-           title="Click here to send a notification"></a>
-    </span>
+                <span th:if="${hostWithLiveInfo.host.hostUser != null}">
+                    <a href="#" th:data-email="${hostWithLiveInfo.host.hostUser.email}"
+                       th:data-firstname="${hostWithLiveInfo.host.hostUser.firstName}"
+                       th:data-lastname="${hostWithLiveInfo.host.hostUser.lastName}"
+                       onclick="showNotificationModal(this)"
+                       th:text="${hostWithLiveInfo.host.hostUser.firstName + ' ' + hostWithLiveInfo.host.hostUser.lastName}"
+                       title="Click here to send a notification"></a>
+                </span>
                 <span th:if="${hostWithLiveInfo.host.hostUser == null}">None</span>
             </td>
             <td th:text="${hostWithLiveInfo.host.ipAddress}"></td>
@@ -43,12 +47,10 @@
             <td th:text="${hostWithLiveInfo.liveInfo.serviceOk}"></td>
             <td th:text="${hostWithLiveInfo.liveInfo.serviceWarning}"></td>
             <td th:text="${hostWithLiveInfo.liveInfo.serviceCritical}"></td>
-            <td class="action-buttons">
-                <!-- Only display edit/delete buttons for admin users -->
-                <span th:if="${#authorization.expression('hasRole(''ADMIN'')')}">
+            <!-- Action Buttons only for Admins -->
+            <td class="action-buttons" th:if="${#authorization.expression('hasRole(''ADMIN'')')}">
                 <button type="button" class="btn btn-update btn-sm" th:data-id="${hostWithLiveInfo.host.id}" onclick="editHost(this.getAttribute('data-id'))">Update</button>
                 <button type="button" class="btn btn-delete btn-sm" th:data-id="${hostWithLiveInfo.host.id}" onclick="confirmDeleteHost(this.getAttribute('data-id'))">Delete</button>
-                    </span>
             </td>
         </tr>
         </tbody>

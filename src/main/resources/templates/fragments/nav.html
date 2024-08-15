@@ -4,10 +4,11 @@
     <a class="navbar-brand" href="#">Host Life Cycle Management</a>
     <div class="collapse navbar-collapse">
         <ul class="navbar-nav mr-auto">
-            <li class="nav-item"><a class="nav-link" th:href="@{/hosts}">Hosts</a></li>
-            <li class="nav-item"><a class="nav-link" th:href="@{/hosts/import}">Import Hosts</a></li>
-            <!-- Notifications Dropdown -->
-            <li class="nav-item dropdown">
+            <!-- Authenticated User -->
+            <li th:if="${#authentication.name != 'anonymousUser'}" class="nav-item"><a class="nav-link" th:href="@{/hosts}">Hosts</a></li>
+
+            <!-- Notifications for authenticated users -->
+            <li th:if="${#authentication.name != 'anonymousUser'}" class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
                    data-bs-toggle="dropdown" aria-expanded="false">
                     Notifications
@@ -24,27 +25,27 @@
                     </li>
                 </ul>
             </li>
+
+            <!-- Admin Only Section -->
+            <li th:if="${#authentication.authorities.?[authority == 'ROLE_ADMIN'].size() > 0}" class="nav-item"><a class="nav-link" th:href="@{/hosts/import}">Import Hosts</a></li>
         </ul>
 
         <ul class="navbar-nav ms-auto">
-            <!-- Check if a user is authenticated -->
-            <li th:if="${#authentication.name != 'anonymousUser'}" class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
-                   data-bs-toggle="dropdown" aria-expanded="false">
-                    <span th:text="${#authentication.name}"></span> <!-- Displaying email (username) -->
-                    <!-- List user-friendly role names -->
-                    (<span th:each="role : ${#authentication.authorities}"
-                           th:text="${role.getAuthority() == 'ROLE_ADMIN' ? 'Admin' : (role.getAuthority() == 'ROLE_USER' ? 'User' : role.getAuthority())}"></span>)
-                </a>
-                <ul class="dropdown-menu" aria-labelledby="userDropdown">
-                    <li><a class="dropdown-item" href="#" th:text="|Logged in as: ${#authentication.name}|"></a></li>
-                    <li><a class="dropdown-item" th:href="@{/logout}">Logout</a></li>
-                </ul>
-            </li>
-
-            <!-- Show login button if user is not authenticated -->
+            <!-- If user is not authenticated -->
             <li th:if="${#authentication.name == 'anonymousUser'}" class="nav-item">
                 <a class="nav-link" th:href="@{/login}">Login</a>
+            </li>
+
+            <!-- Logout Button for Authenticated Users -->
+            <li th:if="${#authentication.name != 'anonymousUser'}" class="nav-item">
+                <span class="nav-link">
+                     <span th:text="${#authentication.name}"></span>
+                    (<span th:if="${#authentication.authorities.?[authority == 'ROLE_ADMIN'].size() > 0}">Admin</span>
+                    <span th:if="${#authentication.authorities.?[authority == 'ROLE_USER'].size() > 0}">User</span>)
+                </span>
+            </li>
+            <li th:if="${#authentication.name != 'anonymousUser'}" class="nav-item">
+                <a class="nav-link" th:href="@{/logout}">Logout</a>
             </li>
         </ul>
     </div>

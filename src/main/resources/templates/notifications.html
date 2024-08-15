@@ -9,10 +9,10 @@
     <h3>Notifications</h3>
 
     <div class="list-group">
-        <div th:if="${unreadNotifications.size() == 0}">
-            <p class="text-muted">You have no unread notifications.</p>
+        <div th:if="${notifications.size() == 0}">
+            <p class="text-muted">You have no notifications.</p>
         </div>
-        <div th:each="notification : ${unreadNotifications}">
+        <div th:each="notification : ${notifications}">
             <a href="#" class="list-group-item list-group-item-action"
                th:text="${notification.title}"
                th:data-id="${notification.id}"
