@@ -2,7 +2,9 @@ package com.checkmk.pdctLifeCycle.service;
 
 import com.checkmk.pdctLifeCycle.model.Host;
 import com.checkmk.pdctLifeCycle.model.HostLiveInfo;
+import com.checkmk.pdctLifeCycle.model.HostNotification;
 import com.checkmk.pdctLifeCycle.model.HostUser;
+import com.checkmk.pdctLifeCycle.repository.NotificationRepository;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +14,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +22,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class NotificationService {
+
+    @Autowired
+    private NotificationRepository notificationRepository;
 
     @Autowired
     private HostService hostService;
@@ -29,13 +35,35 @@ public class NotificationService {
     @Autowired
     private JavaMailSender mailSender;
 
-
     private final String fromName = "Host Management Team";
     private final String fromEmail = "hostManagementTeam@asagno.com";
 
-
     // Store last known number of critical services for each host
     private final Map<String, Integer> criticalServiceCountMap = new ConcurrentHashMap<>();
+
+    public List<HostNotification> getUnreadNotifications(HostUser user) {
+        return notificationRepository.findByUserAndReadFalse(user);
+    }
+
+    public List<HostNotification> getAllNotificationsForUser(HostUser user) {
+        return notificationRepository.findByUser(user);
+    }
+
+    public void markNotificationAsRead(Long notificationId) {
+        HostNotification hostNotification = notificationRepository.findById(notificationId).orElseThrow();
+        hostNotification.setRead(true);
+        notificationRepository.save(hostNotification);
+    }
+
+    public void createNotification(HostUser user, String title, String message) {
+        HostNotification hostNotification = new HostNotification();
+        hostNotification.setTitle(title);
+        hostNotification.setMessage(message);
+        hostNotification.setUser(user);
+        hostNotification.setCreatedAt(LocalDateTime.now());
+        hostNotification.setRead(false);
+        notificationRepository.save(hostNotification);
+    }
 
     @Scheduled(cron = "0 0 6 * * ?") // Run every day at 06:00 AM
     public void checkForExpiringHosts() {
@@ -64,7 +92,6 @@ public class NotificationService {
                 }
             } catch (DateTimeParseException e) {
                 System.out.println("Failed to parse expiration date for host " + host.getHostName() + ": " + e.getMessage());
-
             }
         }
     }
@@ -111,6 +138,9 @@ public class NotificationService {
 
             // Send email
             sendEmail(user.getEmail(), subject, message);
+
+            // Save notification in the database
+            createNotification(user, subject, message);
         }
     }
 
@@ -130,6 +160,9 @@ public class NotificationService {
 
             // Send email
             sendEmail(user.getEmail(), subject, message);
+
+            // Save notification in the database
+            createNotification(user, subject, message);
         }
     }
 
@@ -148,15 +181,15 @@ public class NotificationService {
         }
     }
 
-
-    // sending manual notifications
-    public String sendManualNotification(String email, String title, String messageBody) {
+    // Sending manual notifications and storing them in the database
+    public String sendManualNotification(String email, String title, String messageBody, HostUser user) {
         try {
             sendEmail(email, title, messageBody);
-            return "Notification sent successfully!";
+            createNotification(user, title, messageBody); // Store the manual notification
+            return "Notification sent and stored successfully!";
         } catch (Exception e) {
             e.printStackTrace();
-            return "Failed to send notification.";
+            return "Failed to send and store notification.";
         }
     }
 }

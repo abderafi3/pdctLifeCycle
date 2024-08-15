@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: commonHead}"></head>
+<title>Notifications</title>
+<body>
+<div th:replace="~{fragments/nav :: navbar}"></div>
+
+<div class="container mt-4">
+    <h3>Notifications</h3>
+
+    <div class="list-group">
+        <div th:if="${unreadNotifications.size() == 0}">
+            <p class="text-muted">You have no unread notifications.</p>
+        </div>
+        <div th:each="notification : ${unreadNotifications}">
+            <a href="#" class="list-group-item list-group-item-action"
+               th:text="${notification.title}"
+               th:data-id="${notification.id}"
+               onclick="showNotificationDetails(this)">
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Notification Modal -->
+<div class="modal fade" id="notificationModal" tabindex="-1" aria-labelledby="notificationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="notificationModalLabel">Notification Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h5 id="notificationTitle"></h5>
+                <p id="notificationMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/js/script.js}"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

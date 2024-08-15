@@ -64,3 +64,35 @@ function sendNotification() {
     });
 }
 
+
+function showNotificationDetails(element) {
+    const notificationId = element.getAttribute('data-id');
+    const notificationTitle = element.innerText;
+
+    // Simulate fetching notification details (in reality, you might need to fetch this from the server)
+    const notificationMessage = "This is the detailed message for the notification: " + notificationTitle;
+
+    // Set the modal content
+    document.getElementById('notificationTitle').innerText = notificationTitle;
+    document.getElementById('notificationMessage').innerText = notificationMessage;
+
+    // Show the modal
+    const notificationModal = new bootstrap.Modal(document.getElementById('notificationModal'));
+    notificationModal.show();
+
+    // Mark the notification as read
+    markAsRead(notificationId);
+}
+
+function markAsRead(notificationId) {
+    fetch('/notifications/read/' + notificationId, {
+        method: 'POST'
+    }).then(response => {
+        if (response.ok) {
+            // Optionally, refresh the notification list or remove the read notification
+            location.reload(); // Reload the page to reflect the changes
+        }
+    });
+}
+
+

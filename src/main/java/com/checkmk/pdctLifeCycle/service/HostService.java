@@ -3,6 +3,7 @@ package com.checkmk.pdctLifeCycle.service;
 import com.checkmk.pdctLifeCycle.config.CheckmkConfig;
 import com.checkmk.pdctLifeCycle.exception.HostServiceException;
 import com.checkmk.pdctLifeCycle.model.Host;
+import com.checkmk.pdctLifeCycle.model.HostUser;
 import com.checkmk.pdctLifeCycle.repository.HostRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -39,6 +40,10 @@ public class HostService {
 
     public Host getHostById(String id) {
         return hostRepository.findById(id).orElse(null);
+    }
+
+    public List<Host> getHostsByUser(HostUser user) {
+        return hostRepository.findByHostUser(user);
     }
 
     public Host addHost(Host host) throws HostServiceException {

@@ -1,11 +1,51 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<nav th:fragment="navbar" class="navbar navbar-expand-lg  navbar-dark bg-dark">
+<nav th:fragment="navbar" class="navbar navbar-expand-lg navbar-dark bg-dark">
     <a class="navbar-brand" href="#">Host Life Cycle Management</a>
     <div class="collapse navbar-collapse">
         <ul class="navbar-nav mr-auto">
             <li class="nav-item"><a class="nav-link" th:href="@{/hosts}">Hosts</a></li>
             <li class="nav-item"><a class="nav-link" th:href="@{/hosts/import}">Import Hosts</a></li>
+            <!-- Notifications Dropdown -->
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
+                   data-bs-toggle="dropdown" aria-expanded="false">
+                    Notifications
+                    <span class="badge bg-danger" th:text="${unreadNotifications != null ? unreadNotifications.size() : 0}"></span>
+                </a>
+                <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+                    <li th:if="${unreadNotifications != null and unreadNotifications.size() > 0}"
+                        th:each="notification : ${unreadNotifications}">
+                        <a class="dropdown-item" href="#" th:text="${notification.title}"
+                           th:onclick="'markAsRead(' + notification.id + ')'"></a>
+                    </li>
+                    <li th:if="${unreadNotifications == null or unreadNotifications.size() == 0}">
+                        <a class="dropdown-item" href="#">No new notifications</a>
+                    </li>
+                </ul>
+            </li>
+        </ul>
+
+        <ul class="navbar-nav ms-auto">
+            <!-- Check if a user is authenticated -->
+            <li th:if="${#authentication.name != 'anonymousUser'}" class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
+                   data-bs-toggle="dropdown" aria-expanded="false">
+                    <span th:text="${#authentication.name}"></span> <!-- Displaying email (username) -->
+                    <!-- List user-friendly role names -->
+                    (<span th:each="role : ${#authentication.authorities}"
+                           th:text="${role.getAuthority() == 'ROLE_ADMIN' ? 'Admin' : (role.getAuthority() == 'ROLE_USER' ? 'User' : role.getAuthority())}"></span>)
+                </a>
+                <ul class="dropdown-menu" aria-labelledby="userDropdown">
+                    <li><a class="dropdown-item" href="#" th:text="|Logged in as: ${#authentication.name}|"></a></li>
+                    <li><a class="dropdown-item" th:href="@{/logout}">Logout</a></li>
+                </ul>
+            </li>
+
+            <!-- Show login button if user is not authenticated -->
+            <li th:if="${#authentication.name == 'anonymousUser'}" class="nav-item">
+                <a class="nav-link" th:href="@{/login}">Login</a>
+            </li>
         </ul>
     </div>
 </nav>

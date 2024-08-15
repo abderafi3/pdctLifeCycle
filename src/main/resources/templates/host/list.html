@@ -44,8 +44,11 @@
             <td th:text="${hostWithLiveInfo.liveInfo.serviceWarning}"></td>
             <td th:text="${hostWithLiveInfo.liveInfo.serviceCritical}"></td>
             <td class="action-buttons">
+                <!-- Only display edit/delete buttons for admin users -->
+                <span th:if="${#authorization.expression('hasRole(''ADMIN'')')}">
                 <button type="button" class="btn btn-update btn-sm" th:data-id="${hostWithLiveInfo.host.id}" onclick="editHost(this.getAttribute('data-id'))">Update</button>
                 <button type="button" class="btn btn-delete btn-sm" th:data-id="${hostWithLiveInfo.host.id}" onclick="confirmDeleteHost(this.getAttribute('data-id'))">Delete</button>
+                    </span>
             </td>
         </tr>
         </tbody>
