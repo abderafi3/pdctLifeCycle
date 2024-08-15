@@ -27,7 +27,7 @@
         <div class="form-group">
             <label for="user">Reassign User</label>
             <select class="form-control" id="user" name="user">
-                <option th:each="user : ${users}" th:value="${user.username}" th:text="${user.firstName + ' ' + user.lastName}"></option>
+                <option th:each="user : ${users}" th:value="${user.email}" th:text="${user.firstName + ' ' + user.lastName}"></option>
             </select>
         </div>
         <button type="submit" class="btn btn-primary">Update</button>

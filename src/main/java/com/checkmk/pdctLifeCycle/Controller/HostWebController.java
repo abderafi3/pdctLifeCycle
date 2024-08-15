@@ -3,10 +3,12 @@ package com.checkmk.pdctLifeCycle.Controller;
 import com.checkmk.pdctLifeCycle.exception.HostServiceException;
 import com.checkmk.pdctLifeCycle.model.Host;
 import com.checkmk.pdctLifeCycle.model.HostLiveInfo;
+import com.checkmk.pdctLifeCycle.model.HostUser;
 import com.checkmk.pdctLifeCycle.model.HostWithLiveInfo;
 import com.checkmk.pdctLifeCycle.service.HostImportService;
 import com.checkmk.pdctLifeCycle.service.HostLiveInfoService;
 import com.checkmk.pdctLifeCycle.service.HostService;
+import com.checkmk.pdctLifeCycle.service.UsersService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -28,8 +30,8 @@ public class HostWebController {
     @Autowired
     private HostLiveInfoService hostLiveInfoService;
 
-//    @Autowired
-//    private UserService userService; // UserService to fetch users
+    @Autowired
+  private UsersService usersService;
 
     @GetMapping
     public String getHostsWithLiveInfo(Model model) throws Exception {
@@ -71,20 +73,22 @@ public class HostWebController {
     @GetMapping("/edit/{id}")
     public String showEditHostForm(@PathVariable String id, Model model) {
         Host host = hostService.getHostById(id);
-        //List<User> users = userService.getAllUsers(); // Fetch all users
+        List<HostUser> users = usersService.getAllUsers();  // Fetch all users from the database
+
         model.addAttribute("host", host);
-        //model.addAttribute("users", users);
+        model.addAttribute("users", users);  // Pass the users to the model
         model.addAttribute("pageTitle", "Edit Host");
         return "host/edit"; // Maps to src/main/resources/templates/host/edit.html
     }
 
     @PostMapping("/edit/{id}")
-    public String updateHost(@PathVariable String id, @ModelAttribute Host host) throws HostServiceException {
+    public String updateHost(@PathVariable String id, @ModelAttribute Host host, @RequestParam("user") String email) throws HostServiceException {
+        HostUser selectedUser = usersService.getUserByEmail(email);  // Fetch the selected user by email
+        host.setHostUser(selectedUser);  // Reassign the selected user to the host
         host.setId(id);
         hostService.updateHost(host);
         return "redirect:/hosts";
     }
-
     @GetMapping("/delete/{id}")
     public String deleteHost(@PathVariable String id) throws HostServiceException {
         hostService.deleteHost(id);

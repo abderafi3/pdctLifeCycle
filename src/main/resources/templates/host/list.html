@@ -4,13 +4,14 @@
 <title>Host List</title>
 <body>
 <div th:replace="~{fragments/nav :: navbar}"></div>
-<div class="container mt-4">
+<div class="container mt-3">
     <h3>Host List</h3>
     <button type="button" class="btn btn-primary mb-3" onclick="location.href='/hosts/add'">Add New Host</button>
     <table class="table table-striped">
         <thead>
         <tr>
             <th>Host Name</th>
+            <th>Assigned User</th>
             <th>IP Address</th>
             <th>Creation Date</th>
             <th>Expiration Date</th>
@@ -24,6 +25,9 @@
         <tbody>
         <tr th:each="hostWithLiveInfo : ${combinedHostInfo}">
             <td th:text="${hostWithLiveInfo.host.hostName}"></td>
+            <td>
+                <span th:text="${hostWithLiveInfo.host.hostUser != null ? hostWithLiveInfo.host.hostUser.firstName + ' ' + hostWithLiveInfo.host.hostUser.lastName : 'None'}"></span> <!-- Assigned user name -->
+            </td>
             <td th:text="${hostWithLiveInfo.host.ipAddress}"></td>
             <td th:text="${hostWithLiveInfo.host.creationDate}"></td>
             <td th:text="${hostWithLiveInfo.host.expirationDate != null && !#strings.isEmpty(hostWithLiveInfo.host.expirationDate) ? hostWithLiveInfo.host.expirationDate : 'None'}"></td>
@@ -31,6 +35,7 @@
             <td th:text="${hostWithLiveInfo.liveInfo.serviceOk}"></td>
             <td th:text="${hostWithLiveInfo.liveInfo.serviceWarning}"></td>
             <td th:text="${hostWithLiveInfo.liveInfo.serviceCritical}"></td>
+
             <td>
                 <button type="button" class="btn btn-secondary btn-sm" th:data-id="${hostWithLiveInfo.host.id}" onclick="editHost(this.getAttribute('data-id'))">Edit</button>
                 <button type="button" class="btn btn-danger btn-sm" th:data-id="${hostWithLiveInfo.host.id}" onclick="confirmDeleteHost(this.getAttribute('data-id'))">Delete</button>
