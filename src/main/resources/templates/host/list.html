@@ -14,7 +14,7 @@
         <thead>
         <tr>
             <th>Host Name</th>
-            <th>Assigned User</th>
+            <th th:if="${#authorization.expression('hasRole(''ADMIN'')')}">Assigned User</th>
             <th>IP Address</th>
             <th>Creation Date</th>
             <th>Expiration Date</th>
@@ -29,7 +29,7 @@
         <tbody>
         <tr th:each="hostWithLiveInfo : ${combinedHostInfo}">
             <td th:text="${hostWithLiveInfo.host.hostName}"></td>
-            <td>
+            <td th:if="${#authorization.expression('hasRole(''ADMIN'')')}">
                 <span th:if="${hostWithLiveInfo.host.hostUser != null}">
                     <a href="#" th:data-email="${hostWithLiveInfo.host.hostUser.email}"
                        th:data-firstname="${hostWithLiveInfo.host.hostUser.firstName}"
@@ -58,7 +58,7 @@
 </div>
 
 <!-- Notification Modal -->
-<div class="modal fade" id="notificationModal" tabindex="-1" aria-labelledby="notificationModalLabel" aria-hidden="true">
+<div class="modal fade" id="sendNotificationModal" tabindex="-1" aria-labelledby="notificationModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -78,6 +78,8 @@
                     <label for="notificationMessage" class="form-label">Message</label>
                     <textarea class="form-control" id="notificationMessage" rows="3" placeholder="Enter message"></textarea>
                 </div>
+                <!-- Status message -->
+                <p id="notificationStatus" style="display: none;"></p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -86,6 +88,7 @@
         </div>
     </div>
 </div>
+
 
 <!-- Delete Confirmation Modal -->
 <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
@@ -106,24 +109,6 @@
     </div>
 </div>
 
-<!-- Display Notification Modal  -->
-<div class="modal fade" id="viewNotificationModal" tabindex="-1" aria-labelledby="viewNotificationModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="viewNotificationModalLabel">Notification Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <h5 id="notificationTitleDisplay"></h5>
-                <p id="notificationMessageDisplay"></p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
 <script th:src="@{/js/script.js}"></script>

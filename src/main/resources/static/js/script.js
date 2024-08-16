@@ -45,6 +45,7 @@ function sendNotification() {
     const email = document.getElementById('userEmail').value;
     const title = document.getElementById('notificationTitle').value;
     const message = document.getElementById('notificationMessage').value;
+    const notificationStatus = document.getElementById('notificationStatus'); // Status element
 
     fetch('/sendNotification', {
         method: 'POST',
@@ -54,14 +55,30 @@ function sendNotification() {
         body: JSON.stringify({ email, title, message })
     }).then(response => {
         if (response.ok) {
-            alert('Notification sent successfully!');
-            const sendNotificationModal = bootstrap.Modal.getInstance(document.getElementById('sendNotificationModal'));
-            sendNotificationModal.hide();
+            notificationStatus.style.color = 'green';
+            notificationStatus.textContent = 'Notification sent successfully!';
+            notificationStatus.style.display = 'block'; // Show status message
+
+            // Close the modal after 2 seconds
+            setTimeout(() => {
+                const sendNotificationModal = bootstrap.Modal.getInstance(document.getElementById('sendNotificationModal'));
+                sendNotificationModal.hide();
+                notificationStatus.style.display = 'none'; // Hide the status message after modal closes
+            }, 2000);
+
         } else {
-            alert('Failed to send notification.');
+            notificationStatus.style.color = 'red';
+            notificationStatus.textContent = 'Failed to send notification.';
+            notificationStatus.style.display = 'block'; // Show status message
         }
+    }).catch(error => {
+        notificationStatus.style.color = 'red';
+        notificationStatus.textContent = 'An error occurred while sending notification.';
+        notificationStatus.style.display = 'block'; // Show status message
     });
 }
+
+
 
 document.addEventListener('DOMContentLoaded', function () {
     // Fetch notifications and count on page load
@@ -87,53 +104,36 @@ function fetchUnreadNotificationCount() {
         });
 }
 
-// Fetch notifications on page load and update dropdown
+// Fetch notifications for dropdown
 function fetchNotificationsOnLoad() {
     fetch('/notifications')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error("Network response was not ok");
+        .then(response => response.json())
+        .then(data => {
+            const notificationCount = data.length;
+            document.getElementById('notification-count').textContent = notificationCount;
+
+            const notificationList = document.getElementById('notification-list');
+            notificationList.innerHTML = '';
+
+            if (notificationCount > 0) {
+                data.forEach(notification => {
+                    const listItem = document.createElement('li');
+                    listItem.innerHTML = `<a class="dropdown-item" href="#" data-id="${notification.id}" data-title="${notification.title}" data-message="${notification.message}" onclick="showNotificationDetails(this)">${notification.title}</a>`;
+                    notificationList.appendChild(listItem);
+                });
+            } else {
+                notificationList.innerHTML = '<li><a class="dropdown-item" href="#">No new notifications</a></li>';
             }
-            return response.json();
+
+            // Add "Show All Notifications" link
+            const showAllItem = document.createElement('li');
+            showAllItem.innerHTML = `<a class="dropdown-item" href="/notifications/all">Show All Notifications</a>`;
+            notificationList.appendChild(showAllItem);
         })
-        .then(notifications => {
-            updateNotificationsDropdown(notifications);
-        })
-        .catch(error => {
-            console.error("Error fetching notifications:", error);
-        });
+        .catch(error => console.error('Error fetching notifications:', error));
 }
 
-function updateNotificationsDropdown(notifications) {
-    const notificationList = document.getElementById('notification-list');
-
-    // Clear existing notifications in the dropdown
-    notificationList.innerHTML = '';
-
-    if (notifications.length > 0) {
-        notifications.forEach(notification => {
-            const notificationItem = document.createElement('li');
-            notificationItem.classList.add("dropdown-item");
-            notificationItem.innerHTML = `
-                <a href="#"
-                   data-id="${notification.id}"
-                   data-title="${notification.title}"
-                   data-message="${notification.message}"
-                   onclick="showNotificationDetails(this)">
-                   ${notification.title}
-                </a>`;
-            notificationList.appendChild(notificationItem);
-        });
-    } else {
-        const noNotificationsItem = document.createElement('li');
-        noNotificationsItem.classList.add("dropdown-item");
-        noNotificationsItem.innerHTML = '<a class="dropdown-item" href="#">No new notifications</a>';
-        notificationList.appendChild(noNotificationsItem);
-    }
-}
-
-
-// Function to display notification details in a modal
+// Show notification details in modal
 function showNotificationDetails(element) {
     const notificationTitle = element.getAttribute('data-title');
     const notificationMessage = element.getAttribute('data-message');
@@ -151,7 +151,7 @@ function showNotificationDetails(element) {
     markAsRead(notificationId);
 }
 
-// Function to mark a notification as read
+// Mark notification as read
 function markAsRead(notificationId) {
     fetch(`/notifications/read/${notificationId}`, {
         method: 'POST'

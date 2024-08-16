@@ -7,6 +7,7 @@ import com.checkmk.pdctLifeCycle.service.UsersService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
@@ -63,6 +64,23 @@ public class NotificationController {
         }
         return 0;
     }
+
+    @GetMapping("/notifications/all")
+    public String getAllNotifications(Principal principal, Model model) {
+        if (principal != null) {
+            String email = principal.getName();
+            HostUser user = usersService.getUserByEmail(email);
+
+            // Fetch all notifications for this user
+            List<HostNotification> notifications = notificationService.getAllNotificationsForUser(user);
+            model.addAttribute("pageTitle", "All Notifications");
+            model.addAttribute("notifications", notifications);
+            return "notifications"; // Maps to notifications.html
+        }
+
+        return "redirect:/login"; // Redirect to login if the user is not authenticated
+    }
+
 
     // Send a manual notification (Admin Only)
     @PostMapping("/sendNotification")
