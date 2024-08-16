@@ -2,52 +2,55 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <nav th:fragment="navbar" class="navbar navbar-expand-lg navbar-dark bg-dark">
     <a class="navbar-brand" href="#">Host Life Cycle Management</a>
-    <div class="collapse navbar-collapse">
-        <ul class="navbar-nav mr-auto">
-            <!-- Authenticated User -->
-            <li th:if="${#authentication.name != 'anonymousUser'}" class="nav-item"><a class="nav-link" th:href="@{/hosts}">Hosts</a></li>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarContent">
+        <ul class="navbar-nav me-auto">
+            <!-- Hosts Link for Authenticated Users -->
+            <li th:if="${#authentication.name != 'anonymousUser'}" class="nav-item">
+                <a class="nav-link" th:href="@{/hosts}">Hosts</a>
+            </li>
 
-            <!-- Notifications for authenticated users -->
+            <!-- Notifications for Authenticated Users -->
             <li th:if="${#authentication.name != 'anonymousUser'}" class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
                    data-bs-toggle="dropdown" aria-expanded="false">
                     Notifications
-                    <span class="badge bg-danger" th:text="${unreadNotifications != null ? unreadNotifications.size() : 0}"></span>
+                    <span class="badge bg-danger" id="notification-count">0</span>
                 </a>
-                <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-                    <li th:if="${unreadNotifications != null and unreadNotifications.size() > 0}"
-                        th:each="notification : ${unreadNotifications}">
-                        <a class="dropdown-item" href="#" th:text="${notification.title}"
-                           th:onclick="'markAsRead(' + notification.id + ')'"></a>
-                    </li>
-                    <li th:if="${unreadNotifications == null or unreadNotifications.size() == 0}">
-                        <a class="dropdown-item" href="#">No new notifications</a>
-                    </li>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown" id="notification-list">
+                    <li><a class="dropdown-item" href="#">Loading...</a></li> <!-- Placeholder while loading -->
                 </ul>
             </li>
 
             <!-- Admin Only Section -->
-            <li th:if="${#authentication.authorities.?[authority == 'ROLE_ADMIN'].size() > 0}" class="nav-item"><a class="nav-link" th:href="@{/hosts/import}">Import Hosts</a></li>
+            <li th:if="${#authentication.authorities.?[authority == 'ROLE_ADMIN'].size() > 0}" class="nav-item">
+                <a class="nav-link" th:href="@{/hosts/import}">Import Hosts</a>
+            </li>
         </ul>
 
         <ul class="navbar-nav ms-auto">
-            <!-- If user is not authenticated -->
-            <li th:if="${#authentication.name == 'anonymousUser'}" class="nav-item">
-                <a class="nav-link" th:href="@{/login}">Login</a>
-            </li>
-
-            <!-- Logout Button for Authenticated Users -->
+            <!-- Authenticated User Info -->
             <li th:if="${#authentication.name != 'anonymousUser'}" class="nav-item">
                 <span class="nav-link">
-                     <span th:text="${#authentication.name}"></span>
+                    <span th:text="${#authentication.name}"></span>
                     (<span th:if="${#authentication.authorities.?[authority == 'ROLE_ADMIN'].size() > 0}">Admin</span>
                     <span th:if="${#authentication.authorities.?[authority == 'ROLE_USER'].size() > 0}">User</span>)
                 </span>
             </li>
+
+            <!-- Logout Button for Authenticated Users -->
             <li th:if="${#authentication.name != 'anonymousUser'}" class="nav-item">
                 <a class="nav-link" th:href="@{/logout}">Logout</a>
+            </li>
+
+            <!-- Login Button for Unauthenticated Users -->
+            <li th:if="${#authentication.name == 'anonymousUser'}" class="nav-item">
+                <a class="nav-link" th:href="@{/login}">Login</a>
             </li>
         </ul>
     </div>
 </nav>
+
 </html>

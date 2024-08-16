@@ -60,7 +60,7 @@ public class NotificationService {
         hostNotification.setTitle(title);
         hostNotification.setMessage(message);
         hostNotification.setUser(user);
-        hostNotification.setCreatedAt(LocalDateTime.now());
+        hostNotification.setCreatedAt(LocalDateTime.now().toString());
         hostNotification.setRead(false);
         notificationRepository.save(hostNotification);
     }

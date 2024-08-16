@@ -7,7 +7,6 @@ import com.checkmk.pdctLifeCycle.service.UsersService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
@@ -23,38 +22,26 @@ public class NotificationController {
     @Autowired
     private UsersService usersService;
 
-
+    // Fetch unread notifications for the dropdown
     @GetMapping("/notifications")
-    public String getNotifications(Principal principal, Model model) {
+    @ResponseBody
+    public List<HostNotification> getNotifications(Principal principal) {
         String email = principal.getName();
         HostUser user = usersService.getUserByEmail(email);
 
-        // Fetch notifications for this user
-        List<HostNotification> notifications = notificationService.getAllNotificationsForUser(user);
+        // Ensure that we return a list of notifications
+        List<HostNotification> notifications = notificationService.getUnreadNotifications(user);
 
-        System.out.println("Notifications for user: " + notifications.size()); // Debugging
-        // Add notifications to the model
-        model.addAttribute("notifications", notifications);
+        System.out.println("Fetched notifications: " + notifications); // Debugging
 
-        return "notifications"; // points to notifications.html
+        return notifications;  // This should return a List, not a single object
     }
 
-
-    @ModelAttribute("unreadNotifications")
-    public List<HostNotification> addUnreadNotificationsToModel(Principal principal) {
-        if (principal != null) {
-            String email = principal.getName();
-            HostUser user = usersService.getUserByEmail(email);
-            return notificationService.getUnreadNotifications(user);
-        }
-        return List.of(); // Return an empty list if the user is not logged in
-    }
-
-
+    // Mark a notification as read
     @PostMapping("/notifications/read/{id}")
     @ResponseBody
-    @PreAuthorize("isAuthenticated()")  // Ensure the user is authenticated
-    public String markAsRead(@PathVariable Long id, Principal principal) {
+    @PreAuthorize("isAuthenticated()")
+    public String markAsRead(@PathVariable Long id) {
         try {
             notificationService.markNotificationAsRead(id);
             return "Notification marked as read.";
@@ -64,10 +51,23 @@ public class NotificationController {
         }
     }
 
+    // Fetch unread notifications count for the navbar
+    @GetMapping("/notifications/unread-count")
+    @ResponseBody
+    @PreAuthorize("isAuthenticated()")
+    public int getUnreadNotificationCount(Principal principal) {
+        if (principal != null) {
+            String email = principal.getName();
+            HostUser user = usersService.getUserByEmail(email);
+            return notificationService.getUnreadNotifications(user).size();
+        }
+        return 0;
+    }
 
+    // Send a manual notification (Admin Only)
     @PostMapping("/sendNotification")
     @ResponseBody
-    @PreAuthorize("hasRole('ADMIN')")  // Ensure that only admins can send manual notifications
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public String sendNotification(@RequestBody Map<String, String> payload) {
         try {
             String email = payload.get("email");
@@ -81,7 +81,8 @@ public class NotificationController {
             }
 
             // Use the NotificationService to send the email and store the notification
-            return notificationService.sendManualNotification(email, title, message, user);
+            notificationService.sendManualNotification(email, title, message, user);
+            return "Notification sent successfully!";
         } catch (Exception e) {
             e.printStackTrace();
             return "Failed to send notification.";

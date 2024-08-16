@@ -1,5 +1,6 @@
 package com.checkmk.pdctLifeCycle.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -17,15 +18,16 @@ public class HostNotification {
 
     private boolean read;
 
-    private LocalDateTime createdAt;
+    private String  createdAt;
 
     @ManyToOne
+    @JsonIgnore
     private HostUser user;
 
     // Constructors, getters, setters
 
     public HostNotification() {
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = LocalDateTime.now().toString();
         this.read = false;
     }
 
@@ -64,11 +66,11 @@ public class HostNotification {
         this.read = read;
     }
 
-    public LocalDateTime getCreatedAt() {
+    public String getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
+    public void setCreatedAt(String createdAt) {
         this.createdAt = createdAt;
     }
 

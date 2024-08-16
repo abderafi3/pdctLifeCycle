@@ -1,10 +1,12 @@
 package com.checkmk.pdctLifeCycle.model;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -22,6 +24,10 @@ public class HostUser {
     private String password;
 
     private String role;
+
+    @OneToMany(mappedBy = "user")
+    @JsonManagedReference  // Serialize this side of the relationship
+    private List<HostNotification> notifications;
 
     @OneToMany(mappedBy = "hostUser", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Host> hosts;
