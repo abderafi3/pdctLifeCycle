@@ -1,7 +1,6 @@
 // Function to handle the form submission for selected hosts
 function debugFormSubmission() {
     const selectedHostIds = Array.from(document.querySelectorAll('input[name="selectedHostIds"]:checked')).map(cb => cb.value);
-    console.log('Selected Host IDs:', selectedHostIds);
     return selectedHostIds.length > 0;
 }
 

@@ -33,8 +33,6 @@ public class NotificationController {
         // Ensure that we return a list of notifications
         List<HostNotification> notifications = notificationService.getUnreadNotifications(user);
 
-        System.out.println("Fetched notifications: " + notifications); // Debugging
-
         return notifications;  // This should return a List, not a single object
     }
 
