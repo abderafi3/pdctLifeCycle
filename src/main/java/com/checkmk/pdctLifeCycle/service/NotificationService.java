@@ -3,7 +3,6 @@ package com.checkmk.pdctLifeCycle.service;
 import com.checkmk.pdctLifeCycle.model.Host;
 import com.checkmk.pdctLifeCycle.model.HostLiveInfo;
 import com.checkmk.pdctLifeCycle.model.HostNotification;
-import com.checkmk.pdctLifeCycle.model.HostUser;
 import com.checkmk.pdctLifeCycle.repository.NotificationRepository;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -41,12 +40,12 @@ public class NotificationService {
     // Store the last known number of critical services for each host
     private final Map<String, Integer> criticalServiceCountMap = new ConcurrentHashMap<>();
 
-    public List<HostNotification> getUnreadNotifications(HostUser user) {
-        return notificationRepository.findByUserAndReadFalse(user);
+    public List<HostNotification> getUnreadNotifications(String username) {
+        return notificationRepository.findByUsernameAndReadFalse(username);
     }
 
-    public List<HostNotification> getAllNotificationsForUser(HostUser user) {
-        return notificationRepository.findByUser(user);
+    public List<HostNotification> getAllNotificationsForUser(String username) {
+        return notificationRepository.findByUsername(username);
     }
 
     public void markNotificationAsRead(Long notificationId) {
@@ -55,11 +54,11 @@ public class NotificationService {
         notificationRepository.save(hostNotification);
     }
 
-    public void createNotification(HostUser user, String title, String message) {
+    public void createNotification(String username, String title, String message) {
         HostNotification hostNotification = new HostNotification();
         hostNotification.setTitle(title);
         hostNotification.setMessage(message);
-        hostNotification.setUser(user);
+        hostNotification.setUsername(username);
         hostNotification.setCreatedAt(LocalDateTime.now().toString());
         hostNotification.setRead(false);
         notificationRepository.save(hostNotification);
@@ -69,7 +68,6 @@ public class NotificationService {
     public void checkForExpiringHosts() {
         LocalDate today = LocalDate.now();
         LocalDate threeDaysFromNow = today.plusDays(3);
-        LocalDate oneDayFromNow = today.plusDays(1);
 
         List<Host> hosts = hostService.getAllHosts();
 
@@ -113,31 +111,31 @@ public class NotificationService {
     }
 
     private void sendExpirationWarning(Host host, int daysRemaining) {
-        HostUser user = host.getHostUser();
+        String username = host.getUsername();
 
-        if (user != null && daysRemaining >= 0) {
+        if (username != null && daysRemaining >= 0) {
             String subject = "Host Expiration Warning: " + host.getHostName();
             String message = String.format("Dear %s,<br><br>Your host <b>%s</b> will expire in <b>%d</b> day(s).<br>" +
                             "Please take the necessary action.<br><br>Best regards,<br>Host Management Team",
-                    user.getFirstName(), host.getHostName(), daysRemaining);
+                    username, host.getHostName(), daysRemaining);
 
-            sendEmail(user.getEmail(), subject, message);
-            createNotification(user, subject, message);
+            sendEmail(username + "@asagno.local", subject, message);
+            createNotification(username, subject, message);
         }
     }
 
     private void sendCriticalServiceNotification(Host host, int oldCount, int newCount) {
-        HostUser user = host.getHostUser();
+        String username = host.getUsername();
 
-        if (user != null) {
+        if (username != null) {
             String subject = "Critical Service Alert for Host: " + host.getHostName();
             String message = String.format("Dear %s,<br><br>The number of critical services for your host <b>%s</b> has increased.<br>" +
                             "Previous count: <b>%d</b><br>Current count: <b>%d</b><br><br>" +
                             "Please check the host and resolve the issues.<br><br>Best regards,<br>Host Management Team",
-                    user.getFirstName(), host.getHostName(), oldCount, newCount);
+                    username, host.getHostName(), oldCount, newCount);
 
-            sendEmail(user.getEmail(), subject, message);
-            createNotification(user, subject, message);
+            sendEmail(username + "@asagno.local", subject, message);
+            createNotification(username, subject, message);
         }
     }
 
@@ -157,10 +155,10 @@ public class NotificationService {
     }
 
     // Sending manual notifications and storing them in the database
-    public String sendManualNotification(String email, String title, String messageBody, HostUser user) {
+    public String sendManualNotification(String email, String title, String messageBody, String username) {
         try {
             sendEmail(email, title, messageBody);
-            createNotification(user, title, messageBody);
+            createNotification(username, title, messageBody);
             return "Notification sent and stored successfully!";
         } catch (Exception e) {
             e.printStackTrace();

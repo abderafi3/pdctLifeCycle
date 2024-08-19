@@ -25,12 +25,13 @@ public class Host {
     @JoinColumn(name="notification_id")
     private HostNotification hostNotification;
 
-    @ManyToOne
-    @JoinColumn(name="user_id")
-    private HostUser hostUser;
+    private String username; // LDAP username field
 
     @Transient // This field will not be persisted to the database
     private boolean imported;
+
+    @Transient // This field will also not be persisted to the database
+    private LdapUser assignedUser; // The assigned LDAP user
 
     // Constructors, getters, and setters
 
@@ -98,12 +99,12 @@ public class Host {
         this.hostNotification = hostNotification;
     }
 
-    public HostUser getHostUser() {
-        return hostUser;
+    public String getUsername() {
+        return username;
     }
 
-    public void setHostUser(HostUser hostUser) {
-        this.hostUser = hostUser;
+    public void setUsername(String username) {
+        this.username = username;
     }
 
     public boolean isImported() {
@@ -112,5 +113,15 @@ public class Host {
 
     public void setImported(boolean imported) {
         this.imported = imported;
+    }
+
+    // Getter and Setter for assignedUser
+
+    public LdapUser getAssignedUser() {
+        return assignedUser;
+    }
+
+    public void setAssignedUser(LdapUser assignedUser) {
+        this.assignedUser = assignedUser;
     }
 }

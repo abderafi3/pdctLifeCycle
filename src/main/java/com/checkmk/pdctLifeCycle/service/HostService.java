@@ -3,7 +3,6 @@ package com.checkmk.pdctLifeCycle.service;
 import com.checkmk.pdctLifeCycle.config.CheckmkConfig;
 import com.checkmk.pdctLifeCycle.exception.HostServiceException;
 import com.checkmk.pdctLifeCycle.model.Host;
-import com.checkmk.pdctLifeCycle.model.HostUser;
 import com.checkmk.pdctLifeCycle.repository.HostRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -11,6 +10,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.ldap.userdetails.LdapUserDetails;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -42,17 +44,19 @@ public class HostService {
         return hostRepository.findById(id).orElse(null);
     }
 
-    public List<Host> getHostsByUser(HostUser user) {
-        return hostRepository.findByHostUser(user);
+    // Fetch hosts by the authenticated LDAP user's username
+    public List<Host> getHostsByUsername(String username) {
+        return hostRepository.findByUsername(username);  // Assuming the Host model has a 'username' field to store LDAP usernames
     }
 
     public Host addHost(Host host) throws HostServiceException {
+        // Set the host ID to the host's name
         host.setId(host.getHostName());
 
         String apiUrl = checkmkConfig.getApiUrl() + "/api/1.0/domain-types/host_config/collections/all";
 
         try {
-            // Payload
+            // Payload for Checkmk API
             ObjectNode payload = objectMapper.createObjectNode();
             payload.put("folder", "/");
             payload.put("host_name", host.getHostName());
@@ -61,11 +65,18 @@ public class HostService {
             attribute.put("ipaddress", host.getIpAddress());
             payload.set("attributes", attribute);
 
-            // Save in Checkmk
+            // Save host in Checkmk
             restClientService.sendPostRequest(apiUrl, payload.toString());
             this.checkmkActivateChanges();
 
-            // Save in Database
+            // Get the current authenticated LDAP username and set it on the host
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated()) {
+                LdapUserDetails userDetails = (LdapUserDetails) authentication.getPrincipal();
+                host.setUsername(userDetails.getUsername());  // Set the LDAP username
+            }
+
+            // Save the host in the database
             host.setCreationDate(LocalDate.now().toString());
             return hostRepository.save(host);
         } catch (Exception e) {
@@ -82,24 +93,23 @@ public class HostService {
             }
 
             String hostName = existingHost.getHostName();
-
             String apiUrl = checkmkConfig.getApiUrl() + "/api/1.0/objects/host_config/" + hostName;
 
-            // Payload
+            // Payload for Checkmk API
             ObjectNode payload = objectMapper.createObjectNode();
             ObjectNode attributes = objectMapper.createObjectNode();
             attributes.put("ipaddress", host.getIpAddress());
             payload.set("attributes", attributes);
 
-            // Fetch ETag
+            // Fetch the ETag for the existing host
             String eTag = getHostETag(hostName);
 
             // Update host in Checkmk
             restClientService.sendPutRequest(apiUrl, payload.toString(), eTag);
             this.checkmkActivateChanges();
 
-            // Save host in the database
-            host.setHostName(hostName);// Ensure the host name is set
+            // Ensure the host name and creation date remain unchanged
+            host.setHostName(hostName);
             host.setCreationDate(existingHost.getCreationDate());
             return hostRepository.save(host);
         } catch (Exception e) {
@@ -111,11 +121,15 @@ public class HostService {
         try {
             Host host = getHostById(id);
             if (host != null) {
-                // Fetch ETag
+                // Fetch the ETag for the host to delete
                 String eTag = getHostETag(host.getHostName());
                 String apiUrl = checkmkConfig.getApiUrl() + "/api/1.0/objects/host_config/" + host.getHostName();
+
+                // Delete host from Checkmk and activate changes
                 restClientService.sendDeleteRequest(apiUrl, eTag);
                 this.checkmkActivateChanges();
+
+                // Delete host from the database
                 hostRepository.delete(host);
             } else {
                 throw new HostServiceException("Host not found");
@@ -126,24 +140,27 @@ public class HostService {
         }
     }
 
+    // Activate changes in Checkmk
     public void checkmkActivateChanges() {
         String apiUrl = checkmkConfig.getApiUrl() + "/api/1.0/domain-types/activation_run/actions/activate-changes/invoke";
 
-        // Payload
+        // Payload for activation
         ObjectNode payload = objectMapper.createObjectNode();
         payload.put("redirect", false);
         payload.putArray("sites").add(checkmkConfig.getCheckmkSite());
         payload.put("force_foreign_changes", true);
 
-        // Send request
+        // Send activation request to Checkmk
         restClientService.sendPostRequest(apiUrl, payload.toString());
     }
 
+    // Get the ETag for a given host
     public String getHostETag(String hostName) {
         String url = checkmkConfig.getApiUrl() + "/api/1.0/objects/host_config/" + hostName;
         return restClientService.getEtag(url);
     }
 
+    // Check if a host exists in Checkmk
     private boolean hostExistsInCheckmk(String hostName) {
         try {
             String url = checkmkConfig.getApiUrl() + "/api/1.0/objects/host_config/" + hostName;

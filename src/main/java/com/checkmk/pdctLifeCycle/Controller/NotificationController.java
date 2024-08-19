@@ -1,9 +1,7 @@
 package com.checkmk.pdctLifeCycle.Controller;
 
 import com.checkmk.pdctLifeCycle.model.HostNotification;
-import com.checkmk.pdctLifeCycle.model.HostUser;
 import com.checkmk.pdctLifeCycle.service.NotificationService;
-import com.checkmk.pdctLifeCycle.service.UsersService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
@@ -20,20 +18,16 @@ public class NotificationController {
     @Autowired
     private NotificationService notificationService;
 
-    @Autowired
-    private UsersService usersService;
-
     // Fetch unread notifications for the dropdown
     @GetMapping("/notifications")
     @ResponseBody
     public List<HostNotification> getNotifications(Principal principal) {
-        String email = principal.getName();
-        HostUser user = usersService.getUserByEmail(email);
-
-        // Ensure that we return a list of notifications
-        List<HostNotification> notifications = notificationService.getUnreadNotifications(user);
-
-        return notifications;  // This should return a List, not a single object
+        if (principal != null) {
+            String username = principal.getName(); // Get the username from LDAP
+            List<HostNotification> notifications = notificationService.getUnreadNotifications(username);
+            return notifications;  // Return the list of notifications
+        }
+        return List.of();  // Return an empty list if no principal is present
     }
 
     // Mark a notification as read
@@ -56,29 +50,24 @@ public class NotificationController {
     @PreAuthorize("isAuthenticated()")
     public int getUnreadNotificationCount(Principal principal) {
         if (principal != null) {
-            String email = principal.getName();
-            HostUser user = usersService.getUserByEmail(email);
-            return notificationService.getUnreadNotifications(user).size();
+            String username = principal.getName(); // Get the username from LDAP
+            return notificationService.getUnreadNotifications(username).size();
         }
-        return 0;
+        return 0; // Return 0 if no principal is present
     }
 
+    // Fetch all notifications for the user
     @GetMapping("/notifications/all")
     public String getAllNotifications(Principal principal, Model model) {
         if (principal != null) {
-            String email = principal.getName();
-            HostUser user = usersService.getUserByEmail(email);
-
-            // Fetch all notifications for this user
-            List<HostNotification> notifications = notificationService.getAllNotificationsForUser(user);
+            String username = principal.getName(); // Get the username from LDAP
+            List<HostNotification> notifications = notificationService.getAllNotificationsForUser(username);
             model.addAttribute("pageTitle", "All Notifications");
             model.addAttribute("notifications", notifications);
             return "notifications"; // Maps to notifications.html
         }
-
         return "redirect:/login"; // Redirect to login if the user is not authenticated
     }
-
 
     // Send a manual notification (Admin Only)
     @PostMapping("/sendNotification")
@@ -86,18 +75,16 @@ public class NotificationController {
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public String sendNotification(@RequestBody Map<String, String> payload) {
         try {
-            String email = payload.get("email");
+            String username = payload.get("username");  // Using username instead of email
             String title = payload.get("title");
             String message = payload.get("message");
 
-            // Fetch the user by email
-            HostUser user = usersService.getUserByEmail(email);
-            if (user == null) {
-                return "User not found.";
+            if (username == null || username.isEmpty()) {
+                return "Username not provided.";
             }
 
-            // Use the NotificationService to send the email and store the notification
-            notificationService.sendManualNotification(email, title, message, user);
+            // Send the manual notification using the username
+            notificationService.sendManualNotification(username + "@asagno.local", title, message, username);
             return "Notification sent successfully!";
         } catch (Exception e) {
             e.printStackTrace();

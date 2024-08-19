@@ -8,6 +8,7 @@
     <h3>Update Host</h3>
     <!-- Ensure the form action correctly points to the update endpoint with the host's name -->
     <form th:action="@{|/hosts/edit/${host.hostName}|}" method="post">
+<!--        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />-->
         <div class="form-group">
             <label for="hostName">Host Name</label>
             <input type="text" class="form-control" id="hostName" name="hostName" th:value="${host.hostName}" disabled>

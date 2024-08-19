@@ -17,12 +17,13 @@
             </tr>
             </thead>
             <tbody>
-            <tr th:each="host : ${checkmkHosts}">
+            <tr th:each="host : ${checkmkHosts}" th:if="${host != null}">
                 <td><input type="checkbox" name="selectedHostIds" th:value="${host.hostName}" th:disabled="${host.imported}"></td>
                 <td th:text="${host.hostName}"></td>
                 <td th:text="${host.ipAddress}"></td>
                 <td th:text="${host.creationDate}"></td>
             </tr>
+
             </tbody>
         </table>
         <button type="submit" class="btn btn-primary">Import</button>
@@ -54,3 +55,8 @@
 <script th:src="@{/js/script.js}"></script>
 </body>
 </html>
+
+
+
+
+

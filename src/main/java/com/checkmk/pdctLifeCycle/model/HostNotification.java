@@ -18,21 +18,19 @@ public class HostNotification {
 
     private boolean read;
 
-    private String  createdAt;
+    private String createdAt;
 
-    @ManyToOne
-    @JsonIgnore
-    private HostUser user;
+    // Store the LDAP username instead of a HostUser entity
+    private String username;
 
-    // Constructors, getters, setters
+    // Constructors, getters, and setters
 
     public HostNotification() {
         this.createdAt = LocalDateTime.now().toString();
         this.read = false;
     }
 
-    //Getters and Setters
-
+    // Getters and Setters
 
     public Long getId() {
         return id;
@@ -74,11 +72,11 @@ public class HostNotification {
         this.createdAt = createdAt;
     }
 
-    public HostUser getUser() {
-        return user;
+    public String getUsername() {
+        return username;
     }
 
-    public void setUser(HostUser user) {
-        this.user = user;
+    public void setUsername(String username) {
+        this.username = username;
     }
 }
