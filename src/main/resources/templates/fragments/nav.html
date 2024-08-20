@@ -46,7 +46,7 @@
                 <span class="nav-link">
                     <span th:text="${#authentication.name}"></span>
                     (<span th:if="${#authentication.authorities.?[authority == 'ROLE_ADMIN'].size() > 0}">Admin</span>
-                    <span th:if="${#authentication.authorities.?[authority == 'ROLE_USER'].size() > 0}">User</span>)
+                    <span th:if="${#authentication.authorities.?[authority == 'ROLE_ADMIN'].size() == 0}">User</span>)
                 </span>
             </li>
 
@@ -61,7 +61,6 @@
             </li>
         </ul>
     </div>
-</nav>
 
 <!-- Display Notification Modal -->
 <div class="modal fade" id="viewNotificationModal" tabindex="-1" aria-labelledby="viewNotificationModalLabel" aria-hidden="true">
@@ -81,6 +80,7 @@
         </div>
     </div>
 </div>
+</nav>
 
 <!-- Add JavaScript and relevant scripts here -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>

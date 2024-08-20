@@ -10,5 +10,5 @@ import java.util.List;
 public interface HostRepository extends JpaRepository<Host, String> {
 
     // Find hosts by the username field
-    List<Host> findByUsername(String username);
+    List<Host> findByHostUserEmail(String hostUserEmail);
 }

@@ -1,7 +1,9 @@
 package com.checkmk.pdctLifeCycle.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.*;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 
 import java.time.LocalDateTime;
 
@@ -21,9 +23,17 @@ public class HostNotification {
     private String createdAt;
 
     // Store the LDAP username instead of a HostUser entity
-    private String username;
+    private String hostUserEmail;
 
     // Constructors, getters, and setters
+
+    public HostNotification(String title, String message, String hostUserEmail) {
+        this.title = title;
+        this.message = message;
+        this.hostUserEmail = hostUserEmail;
+        this.createdAt = LocalDateTime.now().toString();
+        this.read = false;
+    }
 
     public HostNotification() {
         this.createdAt = LocalDateTime.now().toString();
@@ -72,11 +82,11 @@ public class HostNotification {
         this.createdAt = createdAt;
     }
 
-    public String getUsername() {
-        return username;
+    public String getHostUserEmail() {
+        return hostUserEmail;
     }
 
-    public void setUsername(String username) {
-        this.username = username;
+    public void setHostUserEmail(String hostUserEmail) {
+        this.hostUserEmail = hostUserEmail;
     }
 }

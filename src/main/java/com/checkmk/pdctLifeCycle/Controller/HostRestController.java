@@ -3,9 +3,11 @@ package com.checkmk.pdctLifeCycle.Controller;
 import com.checkmk.pdctLifeCycle.exception.HostServiceException;
 import com.checkmk.pdctLifeCycle.model.Host;
 import com.checkmk.pdctLifeCycle.model.HostLiveInfo;
+import com.checkmk.pdctLifeCycle.model.LdapUser;
 import com.checkmk.pdctLifeCycle.service.HostImportService;
 import com.checkmk.pdctLifeCycle.service.HostLiveInfoService;
 import com.checkmk.pdctLifeCycle.service.HostService;
+import com.checkmk.pdctLifeCycle.service.LdapUserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -27,11 +29,21 @@ public class HostRestController {
     @Autowired
     public HostLiveInfoService hostLiveInfoService;
 
+    @Autowired
+    public LdapUserService ldapUserService;
+
     // Allow any authenticated user to view all hosts
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public List<Host> getAllDatabaseHosts() {
         return hostService.getAllHosts();
+    }
+
+    //for testing purposes
+
+    @GetMapping("/users")
+    public List<LdapUser> getAllLdapUsers() {
+        return ldapUserService.getAllUsers();
     }
 
     // Allow any authenticated user to view Checkmk hosts

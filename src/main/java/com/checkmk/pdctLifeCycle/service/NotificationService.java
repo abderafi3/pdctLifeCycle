@@ -13,7 +13,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
@@ -40,27 +39,23 @@ public class NotificationService {
     // Store the last known number of critical services for each host
     private final Map<String, Integer> criticalServiceCountMap = new ConcurrentHashMap<>();
 
-    public List<HostNotification> getUnreadNotifications(String username) {
-        return notificationRepository.findByUsernameAndReadFalse(username);
+    public List<HostNotification> getUnreadNotifications(String hostUserEmail) {
+        return notificationRepository.findByHostUserEmailAndReadFalse(hostUserEmail);
     }
 
-    public List<HostNotification> getAllNotificationsForUser(String username) {
-        return notificationRepository.findByUsername(username);
+    public List<HostNotification> getAllNotificationsForUser(String hostUserEmail) {
+        return notificationRepository.findByHostUserEmail(hostUserEmail);
     }
 
     public void markNotificationAsRead(Long notificationId) {
-        HostNotification hostNotification = notificationRepository.findById(notificationId).orElseThrow();
-        hostNotification.setRead(true);
-        notificationRepository.save(hostNotification);
+        notificationRepository.findById(notificationId).ifPresent(notification -> {
+            notification.setRead(true);
+            notificationRepository.save(notification);
+        });
     }
 
-    public void createNotification(String username, String title, String message) {
-        HostNotification hostNotification = new HostNotification();
-        hostNotification.setTitle(title);
-        hostNotification.setMessage(message);
-        hostNotification.setUsername(username);
-        hostNotification.setCreatedAt(LocalDateTime.now().toString());
-        hostNotification.setRead(false);
+    public void createNotification(String hostUserEmail, String title, String message) {
+        HostNotification hostNotification = new HostNotification(title, message, hostUserEmail);
         notificationRepository.save(hostNotification);
     }
 
@@ -72,14 +67,13 @@ public class NotificationService {
         List<Host> hosts = hostService.getAllHosts();
 
         for (Host host : hosts) {
+            String expirationDateString = host.getExpirationDate();
+            if (expirationDateString == null || expirationDateString.trim().isEmpty()) {
+                continue;
+            }
+
             try {
-                String expirationDateString = host.getExpirationDate();
-                if (expirationDateString == null || expirationDateString.trim().isEmpty()) {
-                    continue;
-                }
-
                 LocalDate expirationDate = LocalDate.parse(expirationDateString);
-
                 if (!expirationDate.isAfter(threeDaysFromNow)) {
                     int daysRemaining = (int) java.time.temporal.ChronoUnit.DAYS.between(today, expirationDate);
                     sendExpirationWarning(host, daysRemaining);
@@ -91,57 +85,57 @@ public class NotificationService {
     }
 
     @Scheduled(fixedRate = 300000) // Run every 5 minutes
-    public void checkForIncreasedCriticalServices() throws Exception {
+    public void checkForIncreasedCriticalServices() {
         List<Host> hosts = hostService.getAllHosts();
 
         for (Host host : hosts) {
-            HostLiveInfo liveInfo = hostLiveInfoService.getLiveInfoForHost(host.getHostName());
+            try {
+                HostLiveInfo liveInfo = hostLiveInfoService.getLiveInfoForHost(host.getHostName());
+                if (liveInfo != null) {
+                    int currentCriticalServices = Integer.parseInt(liveInfo.getServiceCritical());
+                    int lastKnownCriticalServices = criticalServiceCountMap.getOrDefault(host.getHostName(), 0);
 
-            if (liveInfo != null) {
-                int currentCriticalServices = Integer.parseInt(liveInfo.getServiceCritical());
-
-                int lastKnownCriticalServices = criticalServiceCountMap.getOrDefault(host.getHostName(), 0);
-
-                if (currentCriticalServices > lastKnownCriticalServices) {
-                    sendCriticalServiceNotification(host, lastKnownCriticalServices, currentCriticalServices);
-                    criticalServiceCountMap.put(host.getHostName(), currentCriticalServices);
+                    if (currentCriticalServices > lastKnownCriticalServices) {
+                        sendCriticalServiceNotification(host, lastKnownCriticalServices, currentCriticalServices);
+                        criticalServiceCountMap.put(host.getHostName(), currentCriticalServices);
+                    }
                 }
+            } catch (Exception e) {
+                System.err.println("Error processing host " + host.getHostName() + ": " + e.getMessage());
             }
         }
     }
 
     private void sendExpirationWarning(Host host, int daysRemaining) {
-        String username = host.getUsername();
+        String hostUserEmail = host.getHostUserEmail();
 
-        if (username != null && daysRemaining >= 0) {
+        if (hostUserEmail != null && daysRemaining >= 0) {
             String subject = "Host Expiration Warning: " + host.getHostName();
             String message = String.format("Dear %s,<br><br>Your host <b>%s</b> will expire in <b>%d</b> day(s).<br>" +
                             "Please take the necessary action.<br><br>Best regards,<br>Host Management Team",
-                    username, host.getHostName(), daysRemaining);
+                    hostUserEmail, host.getHostName(), daysRemaining);
 
-            sendEmail(username + "@asagno.local", subject, message);
-            createNotification(username, subject, message);
+            sendEmailAndCreateNotification(hostUserEmail, subject, message);
         }
     }
 
     private void sendCriticalServiceNotification(Host host, int oldCount, int newCount) {
-        String username = host.getUsername();
+        String hostUserEmail = host.getHostUserEmail();
 
-        if (username != null) {
+        if (hostUserEmail != null) {
             String subject = "Critical Service Alert for Host: " + host.getHostName();
             String message = String.format("Dear %s,<br><br>The number of critical services for your host <b>%s</b> has increased.<br>" +
                             "Previous count: <b>%d</b><br>Current count: <b>%d</b><br><br>" +
                             "Please check the host and resolve the issues.<br><br>Best regards,<br>Host Management Team",
-                    username, host.getHostName(), oldCount, newCount);
+                    hostUserEmail, host.getHostName(), oldCount, newCount);
 
-            sendEmail(username + "@asagno.local", subject, message);
-            createNotification(username, subject, message);
+            sendEmailAndCreateNotification(hostUserEmail, subject, message);
         }
     }
 
     public void sendEmail(String to, String subject, String text) {
-        MimeMessage message = mailSender.createMimeMessage();
         try {
+            MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true);
             helper.setFrom(fromName + " <" + fromEmail + ">");
             helper.setTo(to);
@@ -154,11 +148,18 @@ public class NotificationService {
         }
     }
 
-    // Sending manual notifications and storing them in the database
-    public String sendManualNotification(String email, String title, String messageBody, String username) {
+    private void sendEmailAndCreateNotification(String hostUserEmail, String subject, String messageBody) {
         try {
-            sendEmail(email, title, messageBody);
-            createNotification(username, title, messageBody);
+            sendEmail(hostUserEmail, subject, messageBody);
+            createNotification(hostUserEmail, subject, messageBody);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public String sendManualNotification(String email, String title, String messageBody, String hostUserEmail) {
+        try {
+            sendEmailAndCreateNotification(hostUserEmail, title, messageBody);
             return "Notification sent and stored successfully!";
         } catch (Exception e) {
             e.printStackTrace();

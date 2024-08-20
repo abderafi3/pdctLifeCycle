@@ -22,11 +22,4 @@ public class HostWithLiveInfo {
         this.liveInfo = liveInfo;
     }
 
-    public LdapUser getLdapUser() {
-        return ldapUser;
-    }
-
-    public void setLdapUser(LdapUser ldapUser) {
-        this.ldapUser = ldapUser;
-    }
 }
