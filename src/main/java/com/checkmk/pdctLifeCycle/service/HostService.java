@@ -10,9 +10,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.ldap.userdetails.LdapUserDetails;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -45,8 +42,8 @@ public class HostService {
     }
 
     // Fetch hosts by the authenticated LDAP user's username
-    public List<Host> getHostsByUsername(String username) {
-        return hostRepository.findByUsername(username);  // Assuming the Host model has a 'username' field to store LDAP usernames
+    public List<Host> getHostsByUsername(String hostUserEmail) {
+        return hostRepository.findByHostUserEmail(hostUserEmail);  // Assuming the Host model has a 'username' field to store LDAP usernames
     }
 
     public Host addHost(Host host) throws HostServiceException {
@@ -69,12 +66,6 @@ public class HostService {
             restClientService.sendPostRequest(apiUrl, payload.toString());
             this.checkmkActivateChanges();
 
-            // Get the current authenticated LDAP username and set it on the host
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (authentication != null && authentication.isAuthenticated()) {
-                LdapUserDetails userDetails = (LdapUserDetails) authentication.getPrincipal();
-                host.setUsername(userDetails.getUsername());  // Set the LDAP username
-            }
 
             // Save the host in the database
             host.setCreationDate(LocalDate.now().toString());

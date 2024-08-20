@@ -1,9 +1,12 @@
 package com.checkmk.pdctLifeCycle.Controller;
 
 import com.checkmk.pdctLifeCycle.model.HostNotification;
+import com.checkmk.pdctLifeCycle.model.LdapUser;
 import com.checkmk.pdctLifeCycle.service.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -44,24 +47,33 @@ public class NotificationController {
         }
     }
 
-    // Fetch unread notifications count for the navbar
     @GetMapping("/notifications/unread-count")
     @ResponseBody
     @PreAuthorize("isAuthenticated()")
-    public int getUnreadNotificationCount(Principal principal) {
-        if (principal != null) {
-            String username = principal.getName(); // Get the username from LDAP
-            return notificationService.getUnreadNotifications(username).size();
-        }
-        return 0; // Return 0 if no principal is present
-    }
+    public int getUnreadNotificationCount() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
+        if (authentication != null && authentication.isAuthenticated()) {
+            Object principal = authentication.getPrincipal();
+
+            // Check if the principal is an instance of LdapUser
+            if (principal instanceof LdapUser) {
+                LdapUser ldapUser = (LdapUser) principal;
+                String userEmail = ldapUser.getEmail(); // Get the email from the LdapUser
+
+                // Fetch unread notifications based on email
+                return notificationService.getUnreadNotifications(userEmail).size();
+            }
+        }
+
+        return 0; // Return 0 if no principal or email is found
+    }
     // Fetch all notifications for the user
     @GetMapping("/notifications/all")
     public String getAllNotifications(Principal principal, Model model) {
         if (principal != null) {
-            String username = principal.getName(); // Get the username from LDAP
-            List<HostNotification> notifications = notificationService.getAllNotificationsForUser(username);
+            String userEmail = principal.getName(); // Get the user's email (userPrincipalName from LDAP)
+            List<HostNotification> notifications = notificationService.getAllNotificationsForUser(userEmail);
             model.addAttribute("pageTitle", "All Notifications");
             model.addAttribute("notifications", notifications);
             return "notifications"; // Maps to notifications.html
@@ -75,16 +87,16 @@ public class NotificationController {
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public String sendNotification(@RequestBody Map<String, String> payload) {
         try {
-            String username = payload.get("username");  // Using username instead of email
+            String userEmail = payload.get("email");  // Now using email instead of username
             String title = payload.get("title");
             String message = payload.get("message");
 
-            if (username == null || username.isEmpty()) {
-                return "Username not provided.";
+            if (userEmail == null || userEmail.isEmpty()) {
+                return "Email not provided.";
             }
 
-            // Send the manual notification using the username
-            notificationService.sendManualNotification(username + "@asagno.local", title, message, username);
+            // Send the manual notification using the email
+            notificationService.sendManualNotification(userEmail, title, message, userEmail);
             return "Notification sent successfully!";
         } catch (Exception e) {
             e.printStackTrace();

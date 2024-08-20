@@ -31,17 +31,15 @@
             <td th:text="${hostWithLiveInfo.host.hostName}"></td>
             <td sec:authorize="hasRole('ADMIN')">
                 <!-- Display the LDAP user information -->
-                <span th:if="${hostWithLiveInfo.ldapUser != null}">
-    <a href="#" th:data-email="${hostWithLiveInfo.ldapUser.email}"
-       th:data-firstname="${hostWithLiveInfo.ldapUser.firstName}"
-       th:data-lastname="${hostWithLiveInfo.ldapUser.lastName}"
+                <span th:if="${hostWithLiveInfo.host.hostUser != null}">
+    <a href="#" th:data-email="${hostWithLiveInfo.host.hostUserEmail}"
+       th:data-firstname="${hostWithLiveInfo.host.hostUser}"
        onclick="showNotificationModal(this)"
-       th:text="${hostWithLiveInfo.ldapUser.firstName + ' ' + hostWithLiveInfo.ldapUser.lastName}"
+       th:text="${hostWithLiveInfo.host.hostUser}"
        title="Click here to send a notification"></a>
 </span>
-                <span th:if="${hostWithLiveInfo.ldapUser == null}">None</span>
+                <span th:if="${hostWithLiveInfo.host.hostUser == null}">None</span>
 
-                <span th:if="${hostWithLiveInfo.ldapUser == null}">None</span>
             </td>
             <td th:text="${hostWithLiveInfo.host.ipAddress}"></td>
             <td th:text="${hostWithLiveInfo.host.creationDate}"></td>

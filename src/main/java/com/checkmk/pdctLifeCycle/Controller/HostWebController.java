@@ -90,12 +90,6 @@ public class HostWebController {
 
     @PostMapping("/add")
     public String addHost(@ModelAttribute Host host) throws HostServiceException {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.isAuthenticated()) {
-            LdapUserDetails userDetails = (LdapUserDetails) authentication.getPrincipal();
-            String username = userDetails.getUsername(); // Set the LDAP user as the host owner
-            host.setUsername(username);
-        }
         hostService.addHost(host);
         return "redirect:/hosts";
     }
@@ -117,11 +111,28 @@ public class HostWebController {
 
 
     @PostMapping("/edit/{id}")
-    public String updateHost(@PathVariable String id, @ModelAttribute Host host) throws HostServiceException {
+    public String updateHost(@PathVariable String id, @RequestParam("user") String userEmail, @ModelAttribute Host host) throws HostServiceException {
         host.setId(id);
+
+        // Log the selected user email for debugging
+        System.out.println("Selected User Email: " + userEmail);
+
+        // Fetch the selected LDAP user
+        LdapUser assignedUser = ldapUserService.findUserByEmail(userEmail);
+
+        // Set the user's details (first name, last name, email) to the host
+        if (assignedUser != null) {
+            host.setHostUser(assignedUser.getFirstName() + ' ' + assignedUser.getLastName());
+            host.setHostUserEmail(assignedUser.getEmail());
+        }
+
+        // Update the host with the new assigned user details
         hostService.updateHost(host);
         return "redirect:/hosts";
     }
+
+
+
 
     @GetMapping("/delete/{id}")
     public String deleteHost(@PathVariable String id) throws HostServiceException {
