@@ -26,26 +26,21 @@ public class NotificationController {
     @ResponseBody
     public List<HostNotification> getNotifications(Principal principal) {
         if (principal != null) {
-            String username = principal.getName(); // Get the username from LDAP
+            String username = principal.getName();
             List<HostNotification> notifications = notificationService.getUnreadNotifications(username);
-            return notifications;  // Return the list of notifications
+            return notifications;
         }
-        return List.of();  // Return an empty list if no principal is present
+        return List.of();
     }
 
     // Mark a notification as read
     @PostMapping("/notifications/read/{id}")
     @ResponseBody
     @PreAuthorize("isAuthenticated()")
-    public String markAsRead(@PathVariable Long id) {
-        try {
-            notificationService.markNotificationAsRead(id);
-            return "Notification marked as read.";
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "Failed to mark notification as read.";
-        }
+    public void markAsRead(@PathVariable Long id) {
+           notificationService.markNotificationAsRead(id);
     }
+
 
     @GetMapping("/notifications/unread-count")
     @ResponseBody
@@ -56,18 +51,17 @@ public class NotificationController {
         if (authentication != null && authentication.isAuthenticated()) {
             Object principal = authentication.getPrincipal();
 
-            // Check if the principal is an instance of LdapUser
             if (principal instanceof LdapUser) {
                 LdapUser ldapUser = (LdapUser) principal;
-                String userEmail = ldapUser.getEmail(); // Get the email from the LdapUser
+                String userEmail = ldapUser.getEmail();
 
-                // Fetch unread notifications based on email
                 return notificationService.getUnreadNotifications(userEmail).size();
             }
         }
 
         return 0; // Return 0 if no principal or email is found
     }
+
     // Fetch all notifications for the user
     @GetMapping("/notifications/all")
     public String getAllNotifications(Principal principal, Model model) {
@@ -76,7 +70,7 @@ public class NotificationController {
             List<HostNotification> notifications = notificationService.getAllNotificationsForUser(userEmail);
             model.addAttribute("pageTitle", "All Notifications");
             model.addAttribute("notifications", notifications);
-            return "notifications"; // Maps to notifications.html
+            return "notifications";
         }
         return "redirect:/login"; // Redirect to login if the user is not authenticated
     }
@@ -87,7 +81,7 @@ public class NotificationController {
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public String sendNotification(@RequestBody Map<String, String> payload) {
         try {
-            String userEmail = payload.get("email");  // Now using email instead of username
+            String userEmail = payload.get("email");
             String title = payload.get("title");
             String message = payload.get("message");
 

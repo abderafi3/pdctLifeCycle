@@ -6,10 +6,7 @@ import com.checkmk.pdctLifeCycle.model.Host;
 import com.checkmk.pdctLifeCycle.repository.HostRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -17,8 +14,6 @@ import java.util.List;
 
 @Service
 public class HostService {
-
-    private static final Logger logger = LoggerFactory.getLogger(HostService.class);
 
     private final HostRepository hostRepository;
     private final CheckmkConfig checkmkConfig;
@@ -43,13 +38,11 @@ public class HostService {
 
     // Fetch hosts by the authenticated LDAP user's username
     public List<Host> getHostsByUsername(String hostUserEmail) {
-        return hostRepository.findByHostUserEmail(hostUserEmail);  // Assuming the Host model has a 'username' field to store LDAP usernames
+        return hostRepository.findByHostUserEmail(hostUserEmail);
     }
 
     public Host addHost(Host host) throws HostServiceException {
-        // Set the host ID to the host's name
         host.setId(host.getHostName());
-
         String apiUrl = checkmkConfig.getApiUrl() + "/api/1.0/domain-types/host_config/collections/all";
 
         try {
@@ -71,7 +64,6 @@ public class HostService {
             host.setCreationDate(LocalDate.now().toString());
             return hostRepository.save(host);
         } catch (Exception e) {
-            logger.error("Couldn't add a new host", e);
             throw new HostServiceException("Couldn't add a new host", e);
         }
     }
@@ -99,7 +91,7 @@ public class HostService {
             restClientService.sendPutRequest(apiUrl, payload.toString(), eTag);
             this.checkmkActivateChanges();
 
-            // Ensure the host name and creation date remain unchanged
+            // The host name and creation date remain unchanged
             host.setHostName(hostName);
             host.setCreationDate(existingHost.getCreationDate());
             return hostRepository.save(host);
@@ -126,7 +118,6 @@ public class HostService {
                 throw new HostServiceException("Host not found");
             }
         } catch (Exception e) {
-            logger.error("Couldn't delete the host", e);
             throw new HostServiceException("Couldn't delete the host", e);
         }
     }
@@ -151,14 +142,14 @@ public class HostService {
         return restClientService.getEtag(url);
     }
 
-    // Check if a host exists in Checkmk
-    private boolean hostExistsInCheckmk(String hostName) {
-        try {
-            String url = checkmkConfig.getApiUrl() + "/api/1.0/objects/host_config/" + hostName;
-            ResponseEntity<String> response = restClientService.sendGetRequest(url, String.class);
-            return response.getStatusCode().is2xxSuccessful();
-        } catch (Exception e) {
-            return false;
-        }
-    }
+//    // Check if a host exists in Checkmk
+//    private boolean hostExistsInCheckmk(String hostName) {
+//        try {
+//            String url = checkmkConfig.getApiUrl() + "/api/1.0/objects/host_config/" + hostName;
+//            ResponseEntity<String> response = restClientService.sendGetRequest(url, String.class);
+//            return response.getStatusCode().is2xxSuccessful();
+//        } catch (Exception e) {
+//            return false;
+//        }
+//    }
 }

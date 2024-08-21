@@ -1,12 +1,11 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: commonHead}"></head>
-<title>Import Hosts</title>
 <body>
 <div th:replace="~{fragments/nav :: navbar}"></div>
 <div class="container mt-4">
     <h3>Checkmk Hosts</h3>
-    <form th:action="@{/hosts/import}" method="post" onsubmit="return debugFormSubmission()">
+    <form th:action="@{/hosts/import}" method="post">
         <table class="table table-striped">
             <thead>
             <tr>
@@ -23,7 +22,6 @@
                 <td th:text="${host.ipAddress}"></td>
                 <td th:text="${host.creationDate}"></td>
             </tr>
-
             </tbody>
         </table>
         <button type="submit" class="btn btn-primary">Import</button>
@@ -47,11 +45,7 @@
         </tbody>
     </table>
 
-    <div th:if="${message}">
-        <div class="alert alert-success" th:text="${message}"></div>
-    </div>
 </div>
-
 <script th:src="@{/js/script.js}"></script>
 </body>
 </html>

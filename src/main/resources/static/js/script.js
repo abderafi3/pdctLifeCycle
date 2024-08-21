@@ -1,10 +1,4 @@
-// Function to handle the form submission for selected hosts
-function debugFormSubmission() {
-    const selectedHostIds = Array.from(document.querySelectorAll('input[name="selectedHostIds"]:checked')).map(cb => cb.value);
-    return selectedHostIds.length > 0;
-}
-
-// Function to toggle the selection of all checkboxes
+// Function to toggle the selection of all checkboxes in import.html
 function toggleSelectAll(source) {
     const checkboxes = document.querySelectorAll('input[name="selectedHostIds"]:not(:disabled)');
     checkboxes.forEach(checkbox => checkbox.checked = source.checked);
@@ -62,18 +56,18 @@ function sendNotification() {
             setTimeout(() => {
                 const sendNotificationModal = bootstrap.Modal.getInstance(document.getElementById('sendNotificationModal'));
                 sendNotificationModal.hide();
-                notificationStatus.style.display = 'none'; // Hide the status message after modal closes
+                notificationStatus.style.display = 'none';
             }, 2000);
 
         } else {
             notificationStatus.style.color = 'red';
             notificationStatus.textContent = 'Failed to send notification.';
-            notificationStatus.style.display = 'block'; // Show status message
+            notificationStatus.style.display = 'block';
         }
     }).catch(error => {
         notificationStatus.style.color = 'red';
         notificationStatus.textContent = 'An error occurred while sending notification.';
-        notificationStatus.style.display = 'block'; // Show status message
+        notificationStatus.style.display = 'block'; 
     });
 }
 

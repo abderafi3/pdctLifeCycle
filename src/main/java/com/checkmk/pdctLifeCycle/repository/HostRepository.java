@@ -8,7 +8,5 @@ import java.util.List;
 
 @Repository
 public interface HostRepository extends JpaRepository<Host, String> {
-
-    // Find hosts by the username field
     List<Host> findByHostUserEmail(String hostUserEmail);
 }

@@ -1,8 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/head :: commonHead}">
-    <title>All Notifications</title>
-</head>
+<head th:replace="~{fragments/head :: commonHead}"></head>
 <body>
 <div th:replace="~{fragments/nav :: navbar}"></div>
 
@@ -35,46 +33,3 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-
-
-
-
-<!--<!DOCTYPE html>-->
-<!--<html xmlns:th="http://www.thymeleaf.org">-->
-<!--<head th:replace="~{fragments/head :: commonHead}">-->
-<!--    <title>All Notifications</title>-->
-<!--</head>-->
-<!--<body>-->
-<!--<div th:replace="~{fragments/nav :: navbar}"></div>-->
-
-<!--<div class="container mt-4">-->
-<!--    <h3>All Notifications</h3>-->
-<!--    <table class="table table-striped">-->
-<!--        <thead>-->
-<!--        <tr>-->
-<!--            <th>Title</th>-->
-<!--            <th>Message</th>-->
-<!--            <th>Date Received</th>-->
-<!--            <th>Status</th>-->
-<!--        </tr>-->
-<!--        </thead>-->
-<!--        <tbody>-->
-<!--        <tr th:each="notification : ${notifications}">-->
-<!--            <td class="title" th:text="${notification.title}"></td>-->
-<!--            <td th:text="${notification.message}"></td>-->
-<!--            &lt;!&ndash; Date Formatting using Thymeleaf Date Utility &ndash;&gt;-->
-<!--            <td th:text="${#dates.format(notification.createdAt, 'yyyy-MM-dd HH:mm')}"></td>-->
-<!--            &lt;!&ndash; Make the status clickable to mark as read/unread &ndash;&gt;-->
-<!--            <td>-->
-<!--                <span th:if="${notification.read}" th:text="'Read'"></span>-->
-<!--                <a th:if="${!notification.read}" th:href="@{/notifications/read/{id}(id=${notification.id})}" th:text="'Unread'" class="text-danger"></a>-->
-<!--            </td>-->
-<!--        </tr>-->
-<!--        </tbody>-->
-<!--    </table>-->
-<!--</div>-->
-
-<!--<script th:src="@{/js/script.js}"></script>-->
-<!--<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>-->
-<!--</body>-->
-<!--</html>-->

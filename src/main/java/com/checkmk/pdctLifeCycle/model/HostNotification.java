@@ -22,10 +22,9 @@ public class HostNotification {
 
     private String createdAt;
 
-    // Store the LDAP username instead of a HostUser entity
     private String hostUserEmail;
 
-    // Constructors, getters, and setters
+    // Constructors
 
     public HostNotification(String title, String message, String hostUserEmail) {
         this.title = title;

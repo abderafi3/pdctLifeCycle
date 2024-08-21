@@ -32,7 +32,7 @@ public class Host {
     @Transient // This field will not be persisted to the database
     private boolean imported;
 
-    // Constructors, getters, and setters
+    // Constructors
 
     public Host() {}
 

@@ -25,17 +25,18 @@ import java.util.stream.Collectors;
 @RequestMapping("/hosts")
 public class HostWebController {
 
-    @Autowired
-    private HostService hostService;
+    private final HostService hostService;
+    private final HostImportService hostImportService;
+    private final HostLiveInfoService hostLiveInfoService;
+    private final LdapUserService ldapUserService;
 
     @Autowired
-    private HostImportService hostImportService;
-
-    @Autowired
-    private HostLiveInfoService hostLiveInfoService;
-
-    @Autowired
-    private LdapUserService ldapUserService;
+    public HostWebController(HostService hostService, HostImportService hostImportService, HostLiveInfoService hostLiveInfoService, LdapUserService ldapUserService){
+        this.hostService = hostService;
+        this.hostImportService = hostImportService;
+        this.hostLiveInfoService = hostLiveInfoService;
+        this.ldapUserService = ldapUserService;
+    }
 
 
     @GetMapping
@@ -45,8 +46,7 @@ public class HostWebController {
 
         if (authentication != null && authentication.isAuthenticated()) {
             LdapUserDetails userDetails = (LdapUserDetails) authentication.getPrincipal();
-            String username = userDetails.getUsername(); // LDAP username, e.g., userPrincipalName
-
+            String username = userDetails.getUsername();
             boolean isAdmin = authentication.getAuthorities().stream()
                     .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ROLE_ADMIN"));
 
@@ -97,41 +97,25 @@ public class HostWebController {
     @GetMapping("/edit/{id}")
     public String showEditHostForm(@PathVariable String id, Model model) {
         Host host = hostService.getHostById(id);
-
-        // Fetch users from LDAP instead of the database
         List<LdapUser> users = ldapUserService.getAllUsers();
-
         model.addAttribute("host", host);
-        model.addAttribute("users", users); // Pass the list of users (first name, last name, email) to the view
+        model.addAttribute("users", users);
         model.addAttribute("pageTitle", "Edit Host");
-
         return "host/edit";
     }
-
 
 
     @PostMapping("/edit/{id}")
     public String updateHost(@PathVariable String id, @RequestParam("user") String userEmail, @ModelAttribute Host host) throws HostServiceException {
         host.setId(id);
-
-        // Log the selected user email for debugging
-        System.out.println("Selected User Email: " + userEmail);
-
-        // Fetch the selected LDAP user
         LdapUser assignedUser = ldapUserService.findUserByEmail(userEmail);
-
-        // Set the user's details (first name, last name, email) to the host
         if (assignedUser != null) {
             host.setHostUser(assignedUser.getFirstName() + ' ' + assignedUser.getLastName());
             host.setHostUserEmail(assignedUser.getEmail());
         }
-
-        // Update the host with the new assigned user details
         hostService.updateHost(host);
         return "redirect:/hosts";
     }
-
-
 
 
     @GetMapping("/delete/{id}")
@@ -153,7 +137,6 @@ public class HostWebController {
     @PostMapping("/import")
     public String saveImportedHosts(@RequestParam("selectedHostIds") List<String> selectedHostIds, Model model) {
         hostImportService.saveSelectedHosts(selectedHostIds);
-        model.addAttribute("message", "Hosts imported successfully");
         return "redirect:/hosts/import";
     }
 }

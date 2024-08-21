@@ -38,7 +38,7 @@ public class HostLiveInfoService {
         return allHostsLiveInfo.stream()
                 .filter(hostLiveInfo -> hostLiveInfo.getHostName().equalsIgnoreCase(hostName))
                 .findFirst()
-                .orElse(null);  // Return null if not found, you may handle this case separately
+                .orElse(null);
     }
 
     // Fetch raw data from Checkmk

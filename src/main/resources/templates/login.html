@@ -2,9 +2,8 @@
 <html xmlns:th="http://www.thymeleaf.org">
     <head th:replace="~{fragments/head :: commonHead}"></head>
     <title>Login</title>
-
 <body>
-<div th:replace="~{fragments/nav :: navbar}"></div> <!-- Navbar included -->
+<div th:replace="~{fragments/nav :: navbar}"></div>
 <div class="login-container">
     <div class="login-box">
         <h2 class="text-center">Sign In</h2>
@@ -17,15 +16,8 @@
                 <label for="password">Password</label>
                 <input type="password" id="password" name="password" class="form-control" placeholder="Enter password" required>
             </div>
-            <div class="form-group">
-                <input type="checkbox" id="remember-me" name="remember-me">
-                <label for="remember-me">Remember me</label>
-            </div>
             <div class="form-group text-center">
                 <button type="submit" class="btn btn-primary btn-submit btn-block">Sign In</button>
-            </div>
-            <div class="form-group text-center">
-                <a href="#" class="forgot-password">Forgot password?</a>
             </div>
             <div th:if="${param.error}" class="form-group text-center">
                 <p class="error">Invalid username or password</p>

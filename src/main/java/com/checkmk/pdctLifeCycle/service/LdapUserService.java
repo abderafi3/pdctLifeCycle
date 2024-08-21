@@ -4,7 +4,6 @@ import com.checkmk.pdctLifeCycle.model.LdapUser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.ldap.core.AttributesMapper;
 import org.springframework.ldap.core.LdapTemplate;
-import org.springframework.ldap.core.support.LdapContextSource;
 import org.springframework.ldap.query.LdapQuery;
 import org.springframework.ldap.query.LdapQueryBuilder;
 import org.springframework.stereotype.Service;
@@ -17,12 +16,6 @@ import java.util.stream.Collectors;
 @Service
 public class LdapUserService {
 
-    private final LdapContextSource contextSource;
-
-    @Autowired
-    public LdapUserService(LdapContextSource contextSource) {
-        this.contextSource = contextSource;
-    }
 
     @Autowired
     private LdapTemplate ldapTemplate;

@@ -7,13 +7,13 @@ import com.checkmk.pdctLifeCycle.repository.NotificationRepository;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,20 +21,26 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class NotificationService {
 
-    @Autowired
-    private NotificationRepository notificationRepository;
+    @Value("${spring.mail.from}")
+    private String fromEmail;
+
+    @Value("${spring.mail.from.name}")
+    private String fromName;
+
+    private final NotificationRepository notificationRepository;
+    private final HostService hostService;
+    private final HostLiveInfoService hostLiveInfoService;
+    private final JavaMailSender javaMailSender;
 
     @Autowired
-    private HostService hostService;
+    public NotificationService(NotificationRepository notificationRepository, HostService hostService,
+                               HostLiveInfoService hostLiveInfoService, JavaMailSender javaMailSender){
+        this.notificationRepository = notificationRepository;
+        this.hostService = hostService;
+        this.hostLiveInfoService = hostLiveInfoService;
+        this.javaMailSender = javaMailSender;
+    }
 
-    @Autowired
-    private HostLiveInfoService hostLiveInfoService;
-
-    @Autowired
-    private JavaMailSender mailSender;
-
-    private final String fromName = "Host Management Team";
-    private final String fromEmail = "hostManagementTeam@asagno.com";
 
     // Store the last known number of critical services for each host
     private final Map<String, Integer> criticalServiceCountMap = new ConcurrentHashMap<>();
@@ -71,20 +77,15 @@ public class NotificationService {
             if (expirationDateString == null || expirationDateString.trim().isEmpty()) {
                 continue;
             }
-
-            try {
                 LocalDate expirationDate = LocalDate.parse(expirationDateString);
                 if (!expirationDate.isAfter(threeDaysFromNow)) {
                     int daysRemaining = (int) java.time.temporal.ChronoUnit.DAYS.between(today, expirationDate);
                     sendExpirationWarning(host, daysRemaining);
                 }
-            } catch (DateTimeParseException e) {
-                System.out.println("Failed to parse expiration date for host " + host.getHostName() + ": " + e.getMessage());
-            }
         }
     }
 
-    @Scheduled(fixedRate = 300000) // Run every 5 minutes
+    @Scheduled(fixedRate = 300000) // Run every 5 minutes to check for any new critical Service
     public void checkForIncreasedCriticalServices() {
         List<Host> hosts = hostService.getAllHosts();
 
@@ -135,14 +136,14 @@ public class NotificationService {
 
     public void sendEmail(String to, String subject, String text) {
         try {
-            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessage message = javaMailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true);
             helper.setFrom(fromName + " <" + fromEmail + ">");
             helper.setTo(to);
             helper.setSubject(subject);
             helper.setText(text, true);
 
-            mailSender.send(message);
+            javaMailSender.send(message);
         } catch (MessagingException e) {
             e.printStackTrace();
         }
@@ -160,10 +161,10 @@ public class NotificationService {
     public String sendManualNotification(String email, String title, String messageBody, String hostUserEmail) {
         try {
             sendEmailAndCreateNotification(hostUserEmail, title, messageBody);
-            return "Notification sent and stored successfully!";
+            return "Notification sent successfully!";
         } catch (Exception e) {
             e.printStackTrace();
-            return "Failed to send and store notification.";
+            return "Failed to send notification.";
         }
     }
 }

@@ -4,9 +4,6 @@ import com.checkmk.pdctLifeCycle.config.CheckmkConfig;
 import com.checkmk.pdctLifeCycle.model.CheckmkHostsResponse;
 import com.checkmk.pdctLifeCycle.model.Host;
 import com.checkmk.pdctLifeCycle.repository.HostRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -18,18 +15,14 @@ import java.util.stream.Collectors;
 @Service
 public class HostImportService {
 
-    private static final Logger logger = LoggerFactory.getLogger(HostImportService.class);
-
     private final HostRepository hostRepository;
     private final CheckmkConfig checkmkConfig;
-    private final ObjectMapper objectMapper;
     private final RestClientService restClientService;
 
     @Autowired
-    public HostImportService(HostRepository hostRepository, CheckmkConfig checkmkConfig, ObjectMapper objectMapper, RestClientService restClientService) {
+    public HostImportService(HostRepository hostRepository, CheckmkConfig checkmkConfig, RestClientService restClientService) {
         this.hostRepository = hostRepository;
         this.checkmkConfig = checkmkConfig;
-        this.objectMapper = objectMapper;
         this.restClientService = restClientService;
     }
 
@@ -45,7 +38,6 @@ public class HostImportService {
                     .map(this::mapToHost)
                     .collect(Collectors.toList());
         } catch (Exception e) {
-            logger.error("Failed to fetch hosts from Checkmk", e);
             return List.of();
         }
     }
@@ -57,7 +49,6 @@ public class HostImportService {
                 .filter(host -> selectedHostIds.contains(host.getHostName()))
                 .map(this::setHostNameAsId)
                 .collect(Collectors.toList());
-
         hostRepository.saveAll(selectedHosts);
     }
 
@@ -71,13 +62,11 @@ public class HostImportService {
         return existingHost.isPresent();
     }
 
-    private Host mapToHost(Host host) {
-        Host newHost = new Host();
-        newHost.setId(host.getHostName()); // Ensure ID is set to hostName
-        newHost.setHostName(host.getHostName());
-        newHost.setIpAddress(host.getIpAddress());
-        newHost.setCreationDate(host.getCreationDate());
-        newHost.setImported(isHostInDatabase(host.getHostName())); // Set imported flag
+    private Host mapToHost(Host host){
+        Host newHost = new Host(host.getHostName(), host.getHostName(),
+                host.getIpAddress(), host.getCreationDate());
+        newHost.setImported(isHostInDatabase(host.getHostName()));
         return newHost;
     }
+
 }

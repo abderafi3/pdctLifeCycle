@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity5">
 <head th:replace="~{fragments/head :: commonHead}"></head>
 <title>Host List</title>
 <body>
@@ -30,16 +31,13 @@
         <tr th:each="hostWithLiveInfo : ${combinedHostInfo}">
             <td th:text="${hostWithLiveInfo.host.hostName}"></td>
             <td sec:authorize="hasRole('ADMIN')">
-                <!-- Display the LDAP user information -->
                 <span th:if="${hostWithLiveInfo.host.hostUser != null}">
     <a href="#" th:data-email="${hostWithLiveInfo.host.hostUserEmail}"
        th:data-firstname="${hostWithLiveInfo.host.hostUser}"
        onclick="showNotificationModal(this)"
        th:text="${hostWithLiveInfo.host.hostUser}"
-       title="Click here to send a notification"></a>
-</span>
+       title="Click here to send a notification"></a></span>
                 <span th:if="${hostWithLiveInfo.host.hostUser == null}">None</span>
-
             </td>
             <td th:text="${hostWithLiveInfo.host.ipAddress}"></td>
             <td th:text="${hostWithLiveInfo.host.creationDate}"></td>
@@ -69,7 +67,7 @@
             <div class="modal-body">
                 <div class="mb-3">
                     <label for="userEmail" class="form-label">User Email</label>
-                    <input type="email" class="form-control" id="userEmail" disabled>
+                    <input type="email" class="form-control" id="userEmail">
                 </div>
                 <div class="mb-3">
                     <label for="notificationTitle" class="form-label">Notification Title</label>
@@ -79,7 +77,6 @@
                     <label for="notificationMessage" class="form-label">Message</label>
                     <textarea class="form-control" id="notificationMessage" rows="3" placeholder="Enter message"></textarea>
                 </div>
-                <!-- Status message -->
                 <p id="notificationStatus" style="display: none;"></p>
             </div>
             <div class="modal-footer">
