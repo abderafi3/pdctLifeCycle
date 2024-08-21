@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface HostRepository extends JpaRepository<Host, String> {
     List<Host> findByHostUserEmail(String hostUserEmail);
+    boolean existsByHostName(String hostName);
 }

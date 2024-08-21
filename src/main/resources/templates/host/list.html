@@ -5,7 +5,12 @@
 <title>Host List</title>
 <body>
 <div th:replace="~{fragments/nav :: navbar}"></div>
-<div class="table-container">
+<input type="hidden" id="userRoles" th:value="${userRoles}" />
+<!-- Loader -->
+<div id="loader" class="loader"></div>
+
+<!-- Table Container (Initially Hidden) -->
+<div class="table-container" id="tableContainer" style="display: none;">
     <h3>Hosts</h3>
 
     <!-- Add New Host Button - Only for Admin -->
@@ -27,31 +32,8 @@
             <th sec:authorize="hasRole('ADMIN')">Action</th>
         </tr>
         </thead>
-        <tbody>
-        <tr th:each="hostWithLiveInfo : ${combinedHostInfo}">
-            <td th:text="${hostWithLiveInfo.host.hostName}"></td>
-            <td sec:authorize="hasRole('ADMIN')">
-                <span th:if="${hostWithLiveInfo.host.hostUser != null}">
-    <a href="#" th:data-email="${hostWithLiveInfo.host.hostUserEmail}"
-       th:data-firstname="${hostWithLiveInfo.host.hostUser}"
-       onclick="showNotificationModal(this)"
-       th:text="${hostWithLiveInfo.host.hostUser}"
-       title="Click here to send a notification"></a></span>
-                <span th:if="${hostWithLiveInfo.host.hostUser == null}">None</span>
-            </td>
-            <td th:text="${hostWithLiveInfo.host.ipAddress}"></td>
-            <td th:text="${hostWithLiveInfo.host.creationDate}"></td>
-            <td th:text="${hostWithLiveInfo.host.expirationDate != null && !#strings.isEmpty(hostWithLiveInfo.host.expirationDate) ? hostWithLiveInfo.host.expirationDate : 'None'}"></td>
-            <td th:text="${hostWithLiveInfo.liveInfo.hostState}" th:classappend="${hostWithLiveInfo.liveInfo.hostState == 'UP' ? 'status-up' : (hostWithLiveInfo.liveInfo.hostState == 'DOWN' ? 'status-down' : 'status-unknown')}"></td>
-            <td th:text="${hostWithLiveInfo.liveInfo.serviceOk}"></td>
-            <td th:text="${hostWithLiveInfo.liveInfo.serviceWarning}"></td>
-            <td th:text="${hostWithLiveInfo.liveInfo.serviceCritical}"></td>
-            <!-- Action Buttons only for Admins -->
-            <td class="action-buttons" sec:authorize="hasRole('ADMIN')">
-                <button type="button" class="btn btn-update btn-sm" th:data-id="${hostWithLiveInfo.host.id}" onclick="editHost(this.getAttribute('data-id'))">Update</button>
-                <button type="button" class="btn btn-delete btn-sm" th:data-id="${hostWithLiveInfo.host.id}" onclick="confirmDeleteHost(this.getAttribute('data-id'))">Delete</button>
-            </td>
-        </tr>
+        <tbody id="hostsTableBody">
+        <!-- The rows will be dynamically populated by JavaScript -->
         </tbody>
     </table>
 </div>
