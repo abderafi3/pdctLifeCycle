@@ -7,7 +7,11 @@
 <div th:replace="~{fragments/nav :: navbar}"></div>
 <input type="hidden" id="userRoles" th:value="${userRoles}" />
 <!-- Loader -->
-<div id="loader" class="loader"></div>
+<div id="loading" style="display: none;">
+    <div class="spinner-border text-light" role="status">
+        <span class="sr-only">Loading...</span>
+    </div>
+</div>
 
 <!-- Table Container (Initially Hidden) -->
 <div class="table-container" id="tableContainer" style="display: none;">
@@ -38,8 +42,10 @@
     </table>
 </div>
 <!-- Loading Overlay -->
-<div id="loadingOverlay">
-    <div class="spinner"></div>
+<div id="loadingOverlay" style="display: none;">
+    <div class="spinner-border text-light" role="status">
+        <span class="sr-only">Loading...</span>
+    </div>
     <div id="statusMessage" class="text-light mt-3">Processing...</div>
 </div>
 

@@ -1,9 +1,0 @@
-1- automatic reload every 30 seconds for the host list page. DONE
-2- hostname validation against the database. DONE
-3- ip validation. DONE
-4- opening notification drop down from the import page issue. DONE
-
-
-
-5- opening a list of critical services with details information.
-6- service discovery via api.

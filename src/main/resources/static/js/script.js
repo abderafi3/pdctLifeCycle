@@ -1,12 +1,12 @@
 document.addEventListener('DOMContentLoaded', function () {
     fetchNotificationsOnLoad();
     fetchUnreadNotificationCount();
-    const loader = document.getElementById('loader');
+    const loader = document.getElementById('loading');
     const tableContainer = document.getElementById('tableContainer');
 
     // Only execute the following code if the loader and tableContainer exist (i.e., we are on the correct page)
     if (loader && tableContainer) {
-        loader.style.display = 'block';
+        loader.style.display = 'flex';
         tableContainer.style.display = 'none';
 
         // Fetch live data on page load
@@ -15,8 +15,8 @@ document.addEventListener('DOMContentLoaded', function () {
             tableContainer.style.display = 'block';
         });
 
-        // Set interval to refresh the data every 30 seconds without showing the loader
-        setInterval(fetchLiveHostData, 30000);
+        // Set interval to refresh the data every 10 seconds without showing the loader
+        setInterval(fetchLiveHostData, 10000);
     }
 
     // Add event listener to the form only if it exists on the page
@@ -240,6 +240,7 @@ function monitorHost(id) {
     overlay.style.display = 'flex';  // Show the overlay
     statusMessage.textContent = 'Monitoring services...';
 
+
     fetch(`/hosts/monitor/${id}`, {
         method: 'POST',
         headers: {
@@ -252,7 +253,7 @@ function monitorHost(id) {
         if (response.ok) {
             showModalMessage('Success', 'Service discovery and monitoring initiated successfully!');
         } else {
-            showModalMessage('Error', 'Unable to monitor services of this host.');
+            showModalMessage('Error', 'Service discovery on this host failed. Please verify the IP address and ensure that the Agent software is properly installed.');
         }
     })
     .catch(error => {
