@@ -6,19 +6,82 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Only execute the following code if the loader and tableContainer exist (i.e., we are on the correct page)
     if (loader && tableContainer) {
-        // Show loader initially
         loader.style.display = 'block';
         tableContainer.style.display = 'none';
 
         // Fetch live data on page load
         fetchLiveHostData().then(() => {
-            // Hide loader and show table after the first data load
             loader.style.display = 'none';
             tableContainer.style.display = 'block';
         });
 
         // Set interval to refresh the data every 30 seconds without showing the loader
-        setInterval(fetchLiveHostData, 30000); // 30 seconds
+        setInterval(fetchLiveHostData, 30000);
+    }
+
+    // Add event listener to the form only if it exists on the page
+    const addHostForm = document.getElementById('addHostForm');
+    if (addHostForm) {
+        addHostForm.addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            const hostName = document.getElementById('hostName').value;
+            const ipAddress = document.getElementById('ipAddress').value;
+            const expirationDate = document.getElementById('expirationDate').value;
+
+            fetch(`/hosts/validate-hostname?hostName=${hostName}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.exists) {
+                        showErrorModal('Host name already exists. Please choose another one.');
+                    } else if (!isValidIP(ipAddress)) {
+                        showErrorModal('Invalid IP address. Please enter a valid IP.');
+                    } else if (expirationDate && !isValidExpirationDate(expirationDate)){
+                showErrorModal('Expiration date must be in the future.');
+
+                    } else {
+                                    showLoadingSpinner();
+
+
+                    setTimeout(function () {
+                                  addHostForm.submit();
+                              }, 500);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error validating hostname or IP:', error);
+                    showErrorModal('An error occurred while validating the input.');
+                });
+        });
+    }
+
+    // Event listener for the edit host form
+    const editHostForm = document.getElementById('editHostForm');
+    if (editHostForm) {
+        editHostForm.addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            const ipAddress = document.getElementById('ipAddress').value;
+            const expirationDate = document.getElementById('expirationDate').value;
+
+            if (!isValidIP(ipAddress)) {
+                showErrorModal('Invalid IP address. Please enter a valid IPv4 address.');
+                return;
+            }
+
+            if (expirationDate && !isValidExpirationDate(expirationDate)) {
+                showErrorModal('Expiration date must be in the future.');
+                return;
+            }
+
+            // Show the loading spinner while processing
+            showLoadingSpinner();
+
+            // Submit the form after validation and processing
+            setTimeout(function () {
+                editHostForm.submit();
+            }, 500);  // Simulate processing delay
+        });
     }
 });
 
@@ -159,6 +222,7 @@ function updateHostsTable(hosts) {
         if (isAdminUser) {
             const actionCell = document.createElement('td');
             actionCell.innerHTML = `
+                 <button type="button" class="btn btn-monitor btn-sm" onclick="monitorHost('${host.id}')">Monitor</button>
                 <button type="button" class="btn btn-update btn-sm" onclick="editHost('${host.id}')">Update</button>
                 <button type="button" class="btn btn-delete btn-sm" onclick="confirmDeleteHost('${host.id}')">Delete</button>
             `;
@@ -167,6 +231,47 @@ function updateHostsTable(hosts) {
 
         tableBody.appendChild(row);
     });
+}
+
+function monitorHost(id) {
+    // Show the loading overlay and spinner when monitoring services
+    const overlay = document.getElementById('loadingOverlay');
+    const statusMessage = document.getElementById('statusMessage');
+    overlay.style.display = 'flex';  // Show the overlay
+    statusMessage.textContent = 'Monitoring services...';
+
+    fetch(`/hosts/monitor/${id}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        overlay.style.display = 'none';  // Hide the overlay
+
+        if (response.ok) {
+            showModalMessage('Success', 'Service discovery and monitoring initiated successfully!');
+        } else {
+            showModalMessage('Error', 'Unable to monitor services of this host.');
+        }
+    })
+    .catch(error => {
+        overlay.style.display = 'none';  // Hide the overlay in case of error
+        console.error('Error monitoring host:', error);
+        showModalMessage('Error', 'Unable to monitor services of this host.');
+    });
+}
+
+// Show a modal with success or error message
+function showModalMessage(title, message) {
+    const modalTitle = document.getElementById('modalTitle');
+    const modalBody = document.getElementById('modalBody');
+
+    modalTitle.textContent = title;
+    modalBody.textContent = message;
+
+    const messageModal = new bootstrap.Modal(document.getElementById('messageModal'));
+    messageModal.show();
 }
 
 // Function to open the Send Notification Modal
@@ -246,38 +351,17 @@ function toggleSelectAll(source) {
     checkboxes.forEach(checkbox => checkbox.checked = source.checked);
 }
 
-document.getElementById('addHostForm').addEventListener('submit', function(event) {
-    event.preventDefault(); // Prevent default form submission
+// Function to validate IP address format
+function isValidIP(ipAddress) {
+    const ipPattern = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    return ipPattern.test(ipAddress);
+}
 
-    const hostName = document.getElementById('hostName').value;
-    const ipAddress = document.getElementById('ipAddress').value;
-
-    // Step 1: Validate Hostname (AJAX call to check if hostname exists)
-    fetch(`/hosts/validate-hostname?hostName=${hostName}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.exists) {
-                // Show error modal if hostname exists
-                showErrorModal('Host name already exists. Please choose another one.');
-            } else if (!isValidIP(ipAddress)) {
-                // Step 2: Validate IP Address
-                showErrorModal('Invalid IP address. Please enter a valid IP.');
-            } else {
-                // If all validations pass, show the spinner and proceed
-                showLoadingSpinner();
-
-                // Submit the form after a delay to simulate the process
-                setTimeout(function() {
-                    document.getElementById('addHostForm').submit(); // Final form submission
-                }, 500);
-            }
-        })
-        .catch(error => {
-            console.error('Error validating hostname or IP:', error);
-            showErrorModal('An error occurred while validating the input.');
-        });
-});
-
+// Function to validate expiration date is in the future
+function isValidExpirationDate(expirationDate) {
+    const today = new Date().toISOString().split('T')[0];
+    return expirationDate > today;
+}
 
 // Function to show error modal
 function showErrorModal(message) {
@@ -287,20 +371,10 @@ function showErrorModal(message) {
     errorModal.show();
 }
 
-// Helper function to show the loading spinner
+// Function to show loading spinner and overlay
 function showLoadingSpinner() {
     const overlay = document.getElementById('loadingOverlay');
     const statusMessage = document.getElementById('statusMessage');
     overlay.style.display = 'flex';
-    statusMessage.textContent = 'Discovering services...';
+    statusMessage.textContent = 'Processing...';
 }
-
-// Helper function to validate IP address format
-function isValidIP(ipAddress) {
-    const ipPattern = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-    return ipPattern.test(ipAddress);
-}
-
-
-
-

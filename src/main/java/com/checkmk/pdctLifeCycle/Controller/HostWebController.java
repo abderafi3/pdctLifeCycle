@@ -7,13 +7,16 @@ import com.checkmk.pdctLifeCycle.model.LdapUser;
 import com.checkmk.pdctLifeCycle.service.HostImportService;
 import com.checkmk.pdctLifeCycle.service.HostService;
 import com.checkmk.pdctLifeCycle.service.LdapUserService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.HashMap;
 import java.util.List;
@@ -59,25 +62,12 @@ public class HostWebController {
         return "host/add";
     }
 
+
     @PostMapping("/add")
-    public String addHost(@ModelAttribute Host host, RedirectAttributes redirectAttributes) {
-        try {
-            hostService.addHost(host);
-            redirectAttributes.addFlashAttribute("successMessage", "Host added successfully!");
-            return "redirect:/hosts";  // Redirect to the list of hosts on success
-
-        } catch (HostServiceException e) {
-            // Log the error for further inspection
-            e.printStackTrace();  // Or use a logger
-
-            // Add error message to be displayed to the user
-            redirectAttributes.addFlashAttribute("errorMessage", "Couldn't add the host: " + e.getMessage());
-
-            // Redirect back to the add page with the error message
-            return "redirect:/hosts/add";
-        }
+    public String addHost(@ModelAttribute Host host) throws HostServiceException {
+        hostService.addHost(host);
+        return "redirect:/hosts";
     }
-
 
     @GetMapping("/edit/{id}")
     public String showEditHostForm(@PathVariable String id, Model model) {
@@ -134,4 +124,35 @@ public class HostWebController {
         response.put("exists", existsInDatabase || existsInCheckmk);
         return response;
     }
+
+
+    @PostMapping("/monitor/{id}")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> monitorHost(@PathVariable String id) {
+        Logger logger = LoggerFactory.getLogger(HostWebController.class);
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            Host host = hostService.getHostById(id);
+            if (host == null) {
+                logger.warn("Host with id {} not found", id); // Log only necessary info
+                throw new HostServiceException("Host not found");
+            }
+            hostService.triggerServiceDiscoveryAndMonitor(host.getHostName());
+
+            response.put("success", true);
+            response.put("message", "Service discovery and monitoring initiated successfully!");
+            return ResponseEntity.ok(response);
+
+        } catch (HostServiceException e) {
+            // Log an error message without stack trace
+            logger.error("Error monitoring host: {}", e.getMessage());
+
+            response.put("success", false);
+            response.put("message", "Couldn't monitor the host: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+
 }

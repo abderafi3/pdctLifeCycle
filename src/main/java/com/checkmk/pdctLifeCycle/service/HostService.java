@@ -8,12 +8,14 @@ import com.checkmk.pdctLifeCycle.model.HostWithLiveInfo;
 import com.checkmk.pdctLifeCycle.repository.HostRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.ldap.userdetails.LdapUserDetails;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -22,6 +24,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class HostService {
+    private static final Logger logger = LoggerFactory.getLogger(HostService.class);
 
     private final HostRepository hostRepository;
     private final CheckmkConfig checkmkConfig;
@@ -66,36 +69,26 @@ public class HostService {
         String apiUrl = checkmkConfig.getApiUrl() + "/api/1.0/domain-types/host_config/collections/all";
 
         try {
-            // Create payload for adding the host to Checkmk
+            // Payload for Checkmk API
             ObjectNode payload = objectMapper.createObjectNode();
             payload.put("folder", "/");
             payload.put("host_name", host.getHostName());
+            ObjectNode attribute = objectMapper.createObjectNode();
+            attribute.put("ipaddress", host.getIpAddress());
+            payload.set("attributes", attribute);
 
-            ObjectNode attributes = objectMapper.createObjectNode();
-            attributes.put("ipaddress", host.getIpAddress());
-            payload.set("attributes", attributes);
-
-            // Send the request to add the host to Checkmk
+            // Save host in Checkmk
             restClientService.sendPostRequest(apiUrl, payload.toString());
-
-            // Trigger service discovery and accept the discovered services
-            triggerServiceDiscoveryAndAccept(host.getHostName());
-
-            // Activate changes in Checkmk
             this.checkmkActivateChanges();
 
-            // Save the host to the database
+
+            // Save the host in the database
             host.setCreationDate(LocalDate.now().toString());
             return hostRepository.save(host);
-
-        } catch (HttpClientErrorException e) {
-            throw new HostServiceException("Couldn't add a new host - API Error: " + e.getResponseBodyAsString(), e);
         } catch (Exception e) {
-            throw new HostServiceException("Couldn't add a new host. Please check if the Agent program is already installed.", e);
+            throw new HostServiceException("Couldn't add a new host", e);
         }
     }
-
-
 
     public Host updateHost(Host host) throws HostServiceException {
         try {
@@ -200,12 +193,9 @@ public class HostService {
     }
 
 
-
-
-
-    public void triggerServiceDiscoveryAndAccept(String hostName) throws HostServiceException {
+    public void triggerServiceDiscoveryAndMonitor(String hostName) throws HostServiceException {
         String discoveryApiUrl = checkmkConfig.getApiUrl() + "/api/1.0/domain-types/service_discovery_run/actions/start/invoke";
-        String waitDiscoveryCompletionUrl = checkmkConfig.getApiUrl() + "/api/1.0/objects/service_discovery_run/" +hostName + "/actions/wait-for-completion/invoke";
+        String waitDiscoveryCompletionUrl = checkmkConfig.getApiUrl() + "/api/1.0/objects/service_discovery_run/" + hostName + "/actions/wait-for-completion/invoke";
 
         try {
             // Step 1: Trigger "refresh" to rescan services
@@ -227,54 +217,36 @@ public class HostService {
             fixAllPayload.put("mode", "fix_all");  // Accept all services into monitored phase
 
             restClientService.sendPostRequest(discoveryApiUrl, fixAllPayload.toString());
+            this.checkmkActivateChanges();
 
             System.out.println("Service discovery completed and all services accepted for host: " + hostName);
 
-        } catch (HttpClientErrorException e) {
-            throw new HostServiceException("Couldn't trigger service discovery for host: " + hostName + " - API Error: " + e.getResponseBodyAsString(), e);
+        } catch (ResourceAccessException e) {
+            // Check if the cause is a ProtocolException due to too many redirects
+            if (e.getCause() instanceof java.net.ProtocolException) {
+                logger.error("Too many redirects while trying to monitor services for host: {}", hostName);
+                throw new HostServiceException("Too many redirects while trying to monitor services for host: " + hostName, e);
+            } else {
+                // Log a general connection failure
+                logger.error("Failed to connect to the monitoring service for host: {}", hostName);
+                throw new HostServiceException("Failed to connect to the monitoring service for host: " + hostName, e);
+            }
         } catch (Exception e) {
+            // Handle generic exceptions
+            logger.error("An error occurred while moving services to monitored phase for host: {}", hostName);
             throw new HostServiceException("An error occurred while moving services to monitored phase", e);
         }
     }
 
+
     private boolean waitForServiceDiscoveryCompletion(String waitUrl) throws HostServiceException {
-        // Handle the polling mechanism here to wait for service discovery to complete.
-        // This can involve sending GET requests periodically to check the status and
-        // returning true once the discovery is complete.
-
         try {
-            // Simulate polling - send a GET request to the wait endpoint and check the response
             ResponseEntity<String> response = restClientService.sendGetRequest(waitUrl, String.class);
-            // Process the response and determine if service discovery is completed
-            // This logic depends on the structure of the response from the Checkmk API
-
-            // Example success check (you would need to adapt this based on the actual API)
             return response.getStatusCode().is2xxSuccessful();
         } catch (Exception e) {
             throw new HostServiceException("Failed to wait for service discovery completion.", e);
         }
     }
-
-
-
-//    public void triggerServiceDiscovery(String hostName) throws HostServiceException {
-//        String apiUrl = checkmkConfig.getApiUrl() + "/api/1.0/domain-types/service_discovery_run/actions/start/invoke";
-//        try {
-//            // Prepare payload for service discovery
-//            ObjectNode payload = objectMapper.createObjectNode();
-//            payload.put("host_name", hostName);
-//            payload.put("mode", "new"); // You can choose between "new", "refresh", "fixall"
-//
-//            // Send the request to trigger service discovery
-//            restClientService.sendPostRequest(apiUrl, payload.toString());
-//
-//
-//
-//        } catch (Exception e) {
-//            throw new HostServiceException("Couldn't trigger service discovery for host: " + hostName, e);
-//        }
-//    }
-
 
 
     public boolean hostExistsInDatabase(String hostName) {
