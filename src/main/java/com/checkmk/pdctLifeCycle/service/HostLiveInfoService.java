@@ -2,6 +2,7 @@ package com.checkmk.pdctLifeCycle.service;
 
 import com.checkmk.pdctLifeCycle.config.CheckmkConfig;
 import com.checkmk.pdctLifeCycle.model.HostLiveInfo;
+import com.checkmk.pdctLifeCycle.model.ServiceInfo;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -96,4 +97,74 @@ public class HostLiveInfoService {
         }
         return hostLiveInfoList;
     }
+
+
+    public List<ServiceInfo> getServiceWarnings(String hostName) throws Exception {
+        String jsonData = fetchDataForHost(hostName, "host_warn");
+        return parseServiceInfo(jsonData);
+    }
+
+    public List<ServiceInfo> getServiceCriticals(String hostName) throws Exception {
+        String jsonData = fetchDataForHost(hostName, "host_crit");
+        return parseServiceInfo(jsonData);
+    }
+
+    public List<ServiceInfo> getServiceOKs(String hostName) throws Exception {
+        String jsonData = fetchDataForHost(hostName, "host_ok");
+        return parseServiceInfo(jsonData);
+    }
+
+
+    // Fetch data from Checkmk for a given host and view name
+    private String fetchDataForHost(String hostName, String viewName) {
+        String apiUrl = checkmkConfig.getApiUrl() + "/view.py?host=" + hostName +
+                "&output_format=json_export&site=monitoring&view_name=" + viewName;
+        ResponseEntity<String> response = restClientService.sendGetRequest(apiUrl, String.class);
+        return response.getBody();
+    }
+
+    // Parse JSON response to a list of ServiceInfo objects
+    private List<ServiceInfo> parseServiceInfo(String jsonData) throws Exception {
+        JsonNode jsonNode = objectMapper.readTree(jsonData);
+        Iterator<JsonNode> elements = jsonNode.elements();
+
+        List<String> keys = new ArrayList<>();
+        List<ServiceInfo> serviceInfoList = new ArrayList<>();
+
+        // Parse the keys from the first JSON element (header row)
+        if (elements.hasNext()) {
+            JsonNode firstRow = elements.next();
+            firstRow.forEach(keyNode -> keys.add(keyNode.asText()));
+        }
+
+        // Parse the service data
+        while (elements.hasNext()) {
+            JsonNode valuesNode = elements.next();
+            ServiceInfo serviceInfo = new ServiceInfo();
+
+            // Iterate over values and map them based on the key
+            for (int i = 0; i < keys.size(); i++) {
+                String key = keys.get(i);
+                JsonNode valueNode = valuesNode.get(i);
+
+                switch (key) {
+                    case "service_state":
+                        serviceInfo.setServiceState(valueNode.asText());
+                        break;
+                    case "service_description":
+                        serviceInfo.setServiceDescription(valueNode.asText());
+                        break;
+                    case "svc_plugin_output":
+                        serviceInfo.setPluginOutput(valueNode.asText());
+                        break;
+                    default:
+                        break;
+                }
+            }
+            serviceInfoList.add(serviceInfo);
+        }
+        return serviceInfoList;
+    }
+
+
 }

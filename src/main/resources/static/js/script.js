@@ -213,9 +213,9 @@ function updateHostsTable(hosts) {
             <td class="${liveInfo.hostState === 'UP' ? 'status-up' : (liveInfo.hostState === 'DOWN' ? 'status-down' : 'status-unknown')}">
                 ${liveInfo.hostState || 'Unknown'}
             </td>
-            <td>${liveInfo.serviceOk}</td>
-            <td>${liveInfo.serviceWarning}</td>
-            <td>${liveInfo.serviceCritical}</td>
+            <td><a href="hosts/service-ok/${host.hostName}">${liveInfo.serviceOk}</a></td>
+            <td><a href="hosts/service-warning/${host.hostName}">${liveInfo.serviceWarning}</a></td>
+            <td><a href="hosts/service-critical/${host.hostName}">${liveInfo.serviceCritical}</a></td>
         `;
 
         // If admin, add the action buttons

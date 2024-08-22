@@ -4,7 +4,9 @@ import com.checkmk.pdctLifeCycle.exception.HostServiceException;
 import com.checkmk.pdctLifeCycle.model.Host;
 import com.checkmk.pdctLifeCycle.model.HostWithLiveInfo;
 import com.checkmk.pdctLifeCycle.model.LdapUser;
+import com.checkmk.pdctLifeCycle.model.ServiceInfo;
 import com.checkmk.pdctLifeCycle.service.HostImportService;
+import com.checkmk.pdctLifeCycle.service.HostLiveInfoService;
 import com.checkmk.pdctLifeCycle.service.HostService;
 import com.checkmk.pdctLifeCycle.service.LdapUserService;
 import org.slf4j.Logger;
@@ -29,12 +31,15 @@ public class HostWebController {
     private final HostService hostService;
     private final HostImportService hostImportService;
     private final LdapUserService ldapUserService;
+    private final HostLiveInfoService hostLiveInfoService;
 
     @Autowired
-    public HostWebController(HostService hostService, HostImportService hostImportService, LdapUserService ldapUserService) {
+    public HostWebController(HostService hostService, HostImportService hostImportService,
+                             LdapUserService ldapUserService,HostLiveInfoService hostLiveInfoService) {
         this.hostService = hostService;
         this.hostImportService = hostImportService;
         this.ldapUserService = ldapUserService;
+        this.hostLiveInfoService = hostLiveInfoService;
     }
 
     @GetMapping
@@ -152,6 +157,31 @@ public class HostWebController {
             response.put("message", "Couldn't monitor the host: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
+    }
+
+
+    @GetMapping("/service-ok/{hostName}")
+    public String getServicesOk(@PathVariable String hostName, Model model) throws Exception {
+        List<ServiceInfo> servicesOk = hostLiveInfoService.getServiceOKs(hostName);
+        model.addAttribute("hostName", hostName);
+        model.addAttribute("servicesOk", servicesOk);
+        return "host/service-ok";
+    }
+
+    @GetMapping("/service-warning/{hostName}")
+    public String getServicesWarning(@PathVariable String hostName, Model model) throws Exception {
+        List<ServiceInfo> servicesWarning = hostLiveInfoService.getServiceWarnings(hostName);
+        model.addAttribute("hostName", hostName);
+        model.addAttribute("servicesWarning", servicesWarning);
+        return "host/service-warning";
+    }
+
+    @GetMapping("/service-critical/{hostName}")
+    public String getServicesCritical(@PathVariable String hostName, Model model) throws Exception {
+        List<ServiceInfo> servicesCritical = hostLiveInfoService.getServiceCriticals(hostName);
+        model.addAttribute("hostName", hostName);
+        model.addAttribute("servicesCritical", servicesCritical);
+        return "host/service-critical";
     }
 
 
