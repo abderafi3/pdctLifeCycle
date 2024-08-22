@@ -246,53 +246,61 @@ function toggleSelectAll(source) {
     checkboxes.forEach(checkbox => checkbox.checked = source.checked);
 }
 
-document.addEventListener('DOMContentLoaded', function () {
-    const addHostForm = document.getElementById('addHostForm');
+document.getElementById('addHostForm').addEventListener('submit', function(event) {
+    event.preventDefault(); // Prevent default form submission
 
-    if (addHostForm) {
-        addHostForm.addEventListener('submit', function (event) {
-            event.preventDefault(); // Prevent form submission until validation completes
+    const hostName = document.getElementById('hostName').value;
+    const ipAddress = document.getElementById('ipAddress').value;
 
-            const hostName = document.getElementById('hostName').value;
-            const ipAddress = document.getElementById('ipAddress').value;
+    // Step 1: Validate Hostname (AJAX call to check if hostname exists)
+    fetch(`/hosts/validate-hostname?hostName=${hostName}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.exists) {
+                // Show error modal if hostname exists
+                showErrorModal('Host name already exists. Please choose another one.');
+            } else if (!isValidIP(ipAddress)) {
+                // Step 2: Validate IP Address
+                showErrorModal('Invalid IP address. Please enter a valid IP.');
+            } else {
+                // If all validations pass, show the spinner and proceed
+                showLoadingSpinner();
 
-            // Validate IP address format
-            if (!isValidIpAddress(ipAddress)) {
-                showErrorModal('Invalid IP address. Please enter a valid IPv4  address.');
-                return;
+                // Submit the form after a delay to simulate the process
+                setTimeout(function() {
+                    document.getElementById('addHostForm').submit(); // Final form submission
+                }, 500);
             }
-
-            // AJAX call to validate hostname
-            fetch(`/hosts/validate-hostname?hostName=${hostName}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.exists) {
-                        // Show error message in modal if hostname exists
-                        showErrorModal('Host name already exists. Please choose another one.');
-                    } else {
-                        // Submit the form if validation passes
-                        event.target.submit();
-                    }
-                })
-                .catch(error => {
-                    console.error('Error validating hostname:', error);
-                    showErrorModal('An error occurred while validating the hostname.');
-                });
+        })
+        .catch(error => {
+            console.error('Error validating hostname or IP:', error);
+            showErrorModal('An error occurred while validating the input.');
         });
-    }
-
-    // Function to validate IPv4 address format
-    function isValidIpAddress(ip) {
-        const ipv4Pattern = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-        return ipv4Pattern.test(ip) ;
-    }
-
-    // Function to display error messages in a modal
-    function showErrorModal(message) {
-        const errorModalBody = document.getElementById('errorModalBody');
-        errorModalBody.textContent = message;
-
-        const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
-        errorModal.show();
-    }
 });
+
+
+// Function to show error modal
+function showErrorModal(message) {
+    const errorModalBody = document.getElementById('errorModalBody');
+    errorModalBody.textContent = message;
+    const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+    errorModal.show();
+}
+
+// Helper function to show the loading spinner
+function showLoadingSpinner() {
+    const overlay = document.getElementById('loadingOverlay');
+    const statusMessage = document.getElementById('statusMessage');
+    overlay.style.display = 'flex';
+    statusMessage.textContent = 'Discovering services...';
+}
+
+// Helper function to validate IP address format
+function isValidIP(ipAddress) {
+    const ipPattern = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    return ipPattern.test(ipAddress);
+}
+
+
+
+

@@ -4,6 +4,7 @@ import com.checkmk.pdctLifeCycle.config.CheckmkConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.nio.charset.StandardCharsets;
@@ -40,10 +41,18 @@ public class RestClientService {
         return restTemplate.exchange(url, HttpMethod.GET, entity, responseType);
     }
 
-    public ResponseEntity<String> sendPostRequest(String url, String payload){
-        HttpEntity<String> entity = createHttpEntity(payload, "*");
-        return restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
+    public ResponseEntity<String> sendPostRequest(String url, String payload) {
+        try {
+            HttpEntity<String> entity = createHttpEntity(payload, "*");
+            return restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
+        } catch (RestClientException e) {
+            if (e.getMessage().contains("Too many redirects")) {
+                throw new RestClientException("Too many redirects occurred. Please verify the Checkmk server configuration.");
+            }
+            throw e;
+        }
     }
+
 
     public ResponseEntity<String> sendPutRequest(String url, String payload, String eTag){
         HttpEntity<String> entity = createHttpEntity(payload, eTag);

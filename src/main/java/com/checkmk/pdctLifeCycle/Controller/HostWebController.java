@@ -13,6 +13,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.HashMap;
 import java.util.List;
@@ -59,10 +60,24 @@ public class HostWebController {
     }
 
     @PostMapping("/add")
-    public String addHost(@ModelAttribute Host host) throws HostServiceException {
-        hostService.addHost(host);
-        return "redirect:/hosts";
+    public String addHost(@ModelAttribute Host host, RedirectAttributes redirectAttributes) {
+        try {
+            hostService.addHost(host);
+            redirectAttributes.addFlashAttribute("successMessage", "Host added successfully!");
+            return "redirect:/hosts";  // Redirect to the list of hosts on success
+
+        } catch (HostServiceException e) {
+            // Log the error for further inspection
+            e.printStackTrace();  // Or use a logger
+
+            // Add error message to be displayed to the user
+            redirectAttributes.addFlashAttribute("errorMessage", "Couldn't add the host: " + e.getMessage());
+
+            // Redirect back to the add page with the error message
+            return "redirect:/hosts/add";
+        }
     }
+
 
     @GetMapping("/edit/{id}")
     public String showEditHostForm(@PathVariable String id, Model model) {

@@ -88,10 +88,14 @@ public class HostService {
             host.setCreationDate(LocalDate.now().toString());
             return hostRepository.save(host);
 
-        }  catch (Exception e) {
-            throw new HostServiceException("Couldn't add a new host", e);
+        } catch (HttpClientErrorException e) {
+            throw new HostServiceException("Couldn't add a new host - API Error: " + e.getResponseBodyAsString(), e);
+        } catch (Exception e) {
+            throw new HostServiceException("Couldn't add a new host. Please check if the Agent program is already installed.", e);
         }
     }
+
+
 
     public Host updateHost(Host host) throws HostServiceException {
         try {
@@ -195,29 +199,36 @@ public class HostService {
         return restClientService.getEtag(url);
     }
 
+
+
+
+
     public void triggerServiceDiscoveryAndAccept(String hostName) throws HostServiceException {
         String discoveryApiUrl = checkmkConfig.getApiUrl() + "/api/1.0/domain-types/service_discovery_run/actions/start/invoke";
         String waitDiscoveryCompletionUrl = checkmkConfig.getApiUrl() + "/api/1.0/objects/service_discovery_run/" +hostName + "/actions/wait-for-completion/invoke";
 
         try {
-            //  Trigger "refresh" to rescan services
+            // Step 1: Trigger "refresh" to rescan services
             ObjectNode refreshPayload = objectMapper.createObjectNode();
             refreshPayload.put("host_name", hostName);
-            refreshPayload.put("mode", "refresh");
+            refreshPayload.put("mode", "refresh");  // Rescan services
 
             restClientService.sendPostRequest(discoveryApiUrl, refreshPayload.toString());
 
-            // Handle redirect to "Wait for service discovery completion"
+            // Step 2: Handle redirect to "Wait for service discovery completion"
             boolean isCompleted = waitForServiceDiscoveryCompletion(waitDiscoveryCompletionUrl);
             if (!isCompleted) {
                 throw new HostServiceException("Service discovery did not complete within the expected time.");
             }
-            // Trigger "fix_all" to accept all services into monitored phase
+
+            // Step 3: Trigger "fix_all" to accept all services into monitored phase
             ObjectNode fixAllPayload = objectMapper.createObjectNode();
             fixAllPayload.put("host_name", hostName);
-            fixAllPayload.put("mode", "fix_all");
+            fixAllPayload.put("mode", "fix_all");  // Accept all services into monitored phase
 
             restClientService.sendPostRequest(discoveryApiUrl, fixAllPayload.toString());
+
+            System.out.println("Service discovery completed and all services accepted for host: " + hostName);
 
         } catch (HttpClientErrorException e) {
             throw new HostServiceException("Couldn't trigger service discovery for host: " + hostName + " - API Error: " + e.getResponseBodyAsString(), e);
@@ -227,13 +238,44 @@ public class HostService {
     }
 
     private boolean waitForServiceDiscoveryCompletion(String waitUrl) throws HostServiceException {
+        // Handle the polling mechanism here to wait for service discovery to complete.
+        // This can involve sending GET requests periodically to check the status and
+        // returning true once the discovery is complete.
+
         try {
+            // Simulate polling - send a GET request to the wait endpoint and check the response
             ResponseEntity<String> response = restClientService.sendGetRequest(waitUrl, String.class);
+            // Process the response and determine if service discovery is completed
+            // This logic depends on the structure of the response from the Checkmk API
+
+            // Example success check (you would need to adapt this based on the actual API)
             return response.getStatusCode().is2xxSuccessful();
         } catch (Exception e) {
             throw new HostServiceException("Failed to wait for service discovery completion.", e);
         }
     }
+
+
+
+//    public void triggerServiceDiscovery(String hostName) throws HostServiceException {
+//        String apiUrl = checkmkConfig.getApiUrl() + "/api/1.0/domain-types/service_discovery_run/actions/start/invoke";
+//        try {
+//            // Prepare payload for service discovery
+//            ObjectNode payload = objectMapper.createObjectNode();
+//            payload.put("host_name", hostName);
+//            payload.put("mode", "new"); // You can choose between "new", "refresh", "fixall"
+//
+//            // Send the request to trigger service discovery
+//            restClientService.sendPostRequest(apiUrl, payload.toString());
+//
+//
+//
+//        } catch (Exception e) {
+//            throw new HostServiceException("Couldn't trigger service discovery for host: " + hostName, e);
+//        }
+//    }
+
+
 
     public boolean hostExistsInDatabase(String hostName) {
         return hostRepository.existsByHostName(hostName);
