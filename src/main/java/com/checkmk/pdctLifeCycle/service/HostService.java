@@ -9,9 +9,11 @@ import com.checkmk.pdctLifeCycle.repository.HostRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.ldap.userdetails.LdapUserDetails;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -64,24 +66,32 @@ public class HostService {
         String apiUrl = checkmkConfig.getApiUrl() + "/api/1.0/domain-types/host_config/collections/all";
 
         try {
+            // Create payload for adding the host to Checkmk
             ObjectNode payload = objectMapper.createObjectNode();
             payload.put("folder", "/");
             payload.put("host_name", host.getHostName());
 
-            ObjectNode attribute = objectMapper.createObjectNode();
-            attribute.put("ipaddress", host.getIpAddress());
-            payload.set("attributes", attribute);
+            ObjectNode attributes = objectMapper.createObjectNode();
+            attributes.put("ipaddress", host.getIpAddress());
+            payload.set("attributes", attributes);
 
+            // Send the request to add the host to Checkmk
             restClientService.sendPostRequest(apiUrl, payload.toString());
+
+            // Trigger service discovery and accept the discovered services
+            triggerServiceDiscoveryAndAccept(host.getHostName());
+
+            // Activate changes in Checkmk
             this.checkmkActivateChanges();
 
+            // Save the host to the database
             host.setCreationDate(LocalDate.now().toString());
             return hostRepository.save(host);
-        } catch (Exception e) {
+
+        }  catch (Exception e) {
             throw new HostServiceException("Couldn't add a new host", e);
         }
     }
-
 
     public Host updateHost(Host host) throws HostServiceException {
         try {
@@ -185,6 +195,45 @@ public class HostService {
         return restClientService.getEtag(url);
     }
 
+    public void triggerServiceDiscoveryAndAccept(String hostName) throws HostServiceException {
+        String discoveryApiUrl = checkmkConfig.getApiUrl() + "/api/1.0/domain-types/service_discovery_run/actions/start/invoke";
+        String waitDiscoveryCompletionUrl = checkmkConfig.getApiUrl() + "/api/1.0/objects/service_discovery_run/" +hostName + "/actions/wait-for-completion/invoke";
+
+        try {
+            //  Trigger "refresh" to rescan services
+            ObjectNode refreshPayload = objectMapper.createObjectNode();
+            refreshPayload.put("host_name", hostName);
+            refreshPayload.put("mode", "refresh");
+
+            restClientService.sendPostRequest(discoveryApiUrl, refreshPayload.toString());
+
+            // Handle redirect to "Wait for service discovery completion"
+            boolean isCompleted = waitForServiceDiscoveryCompletion(waitDiscoveryCompletionUrl);
+            if (!isCompleted) {
+                throw new HostServiceException("Service discovery did not complete within the expected time.");
+            }
+            // Trigger "fix_all" to accept all services into monitored phase
+            ObjectNode fixAllPayload = objectMapper.createObjectNode();
+            fixAllPayload.put("host_name", hostName);
+            fixAllPayload.put("mode", "fix_all");
+
+            restClientService.sendPostRequest(discoveryApiUrl, fixAllPayload.toString());
+
+        } catch (HttpClientErrorException e) {
+            throw new HostServiceException("Couldn't trigger service discovery for host: " + hostName + " - API Error: " + e.getResponseBodyAsString(), e);
+        } catch (Exception e) {
+            throw new HostServiceException("An error occurred while moving services to monitored phase", e);
+        }
+    }
+
+    private boolean waitForServiceDiscoveryCompletion(String waitUrl) throws HostServiceException {
+        try {
+            ResponseEntity<String> response = restClientService.sendGetRequest(waitUrl, String.class);
+            return response.getStatusCode().is2xxSuccessful();
+        } catch (Exception e) {
+            throw new HostServiceException("Failed to wait for service discovery completion.", e);
+        }
+    }
 
     public boolean hostExistsInDatabase(String hostName) {
         return hostRepository.existsByHostName(hostName);
