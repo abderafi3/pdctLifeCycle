@@ -12,18 +12,13 @@
             <th>Title</th>
             <th>Message</th>
             <th>Date Received</th>
-            <th>Status</th>
         </tr>
         </thead>
         <tbody>
         <tr th:each="notification : ${notifications}">
             <td class="title" th:text="${notification.title}"></td>
             <td th:text="${notification.message}"></td>
-
-            <td>
-            <span th:utext="${#strings.substring(notification.createdAt,0,16)}"></span>
-                    </td>
-            <td th:text="${notification.read ? 'Read' : 'Unread'}"></td>
+            <td><span th:text="${#strings.replace(#strings.substring(notification.createdAt, 0, 16), 'T', ' ')}"></span></td>
         </tr>
         </tbody>
     </table>

@@ -8,8 +8,6 @@ import com.checkmk.pdctLifeCycle.model.HostWithLiveInfo;
 import com.checkmk.pdctLifeCycle.repository.HostRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -24,7 +22,6 @@ import java.util.stream.Collectors;
 
 @Service
 public class HostService {
-    private static final Logger logger = LoggerFactory.getLogger(HostService.class);
 
     private final HostRepository hostRepository;
     private final CheckmkConfig checkmkConfig;
@@ -51,6 +48,19 @@ public class HostService {
 
     public List<Host> getHostsByUsername(String hostUserEmail) {
         return hostRepository.findByHostUserEmail(hostUserEmail);
+    }
+
+    public boolean hostExistsInDatabase(String hostName) {
+        return hostRepository.existsByHostName(hostName);
+    }
+
+    public boolean hostExistsInCheckmk(String hostName) {
+        String apiUrl = checkmkConfig.getApiUrl() + "/api/1.0/objects/host_config/" + hostName;
+        try {
+            return restClientService.sendGetRequest(apiUrl, String.class).getStatusCode().is2xxSuccessful();
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public Host addHost(Host host) throws HostServiceException {
@@ -80,7 +90,6 @@ public class HostService {
             // Save host in Checkmk
             restClientService.sendPostRequest(apiUrl, payload.toString());
             this.checkmkActivateChanges();
-
 
             // Save the host in the database
             host.setCreationDate(LocalDate.now().toString());
@@ -198,42 +207,34 @@ public class HostService {
         String waitDiscoveryCompletionUrl = checkmkConfig.getApiUrl() + "/api/1.0/objects/service_discovery_run/" + hostName + "/actions/wait-for-completion/invoke";
 
         try {
-            // Step 1: Trigger "refresh" to rescan services
+            // Trigger "refresh" to rescan services
             ObjectNode refreshPayload = objectMapper.createObjectNode();
             refreshPayload.put("host_name", hostName);
             refreshPayload.put("mode", "refresh");  // Rescan services
 
             restClientService.sendPostRequest(discoveryApiUrl, refreshPayload.toString());
 
-            // Step 2: Handle redirect to "Wait for service discovery completion"
+            // Handle redirect to "Wait for service discovery completion"
             boolean isCompleted = waitForServiceDiscoveryCompletion(waitDiscoveryCompletionUrl);
             if (!isCompleted) {
                 throw new HostServiceException("Service discovery did not complete within the expected time.");
             }
 
-            // Step 3: Trigger "fix_all" to accept all services into monitored phase
+            // Trigger "fix_all" to accept all services into monitored phase
             ObjectNode fixAllPayload = objectMapper.createObjectNode();
             fixAllPayload.put("host_name", hostName);
-            fixAllPayload.put("mode", "fix_all");  // Accept all services into monitored phase
+            fixAllPayload.put("mode", "fix_all");
 
             restClientService.sendPostRequest(discoveryApiUrl, fixAllPayload.toString());
             this.checkmkActivateChanges();
 
-            System.out.println("Service discovery completed and all services accepted for host: " + hostName);
-
         } catch (ResourceAccessException e) {
-            // Check if the cause is a ProtocolException due to too many redirects
             if (e.getCause() instanceof java.net.ProtocolException) {
-                logger.error("Too many redirects while trying to monitor services for host: {}", hostName);
                 throw new HostServiceException("Too many redirects while trying to monitor services for host: " + hostName, e);
             } else {
-                // Log a general connection failure
-                logger.error("Failed to connect to the monitoring service for host: {}", hostName);
                 throw new HostServiceException("Failed to connect to the monitoring service for host: " + hostName, e);
             }
         } catch (Exception e) {
-            // Handle generic exceptions
-            logger.error("An error occurred while moving services to monitored phase for host: {}", hostName);
             throw new HostServiceException("An error occurred while moving services to monitored phase", e);
         }
     }
@@ -248,17 +249,4 @@ public class HostService {
         }
     }
 
-
-    public boolean hostExistsInDatabase(String hostName) {
-        return hostRepository.existsByHostName(hostName);
-    }
-
-    public boolean hostExistsInCheckmk(String hostName) {
-        String apiUrl = checkmkConfig.getApiUrl() + "/api/1.0/objects/host_config/" + hostName;
-        try {
-            return restClientService.sendGetRequest(apiUrl, String.class).getStatusCode().is2xxSuccessful();
-        } catch (Exception e) {
-            return false;
-        }
-    }
 }

@@ -9,8 +9,6 @@ import com.checkmk.pdctLifeCycle.service.HostImportService;
 import com.checkmk.pdctLifeCycle.service.HostLiveInfoService;
 import com.checkmk.pdctLifeCycle.service.HostService;
 import com.checkmk.pdctLifeCycle.service.LdapUserService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -134,13 +132,10 @@ public class HostWebController {
     @PostMapping("/monitor/{id}")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> monitorHost(@PathVariable String id) {
-        Logger logger = LoggerFactory.getLogger(HostWebController.class);
         Map<String, Object> response = new HashMap<>();
-
         try {
             Host host = hostService.getHostById(id);
             if (host == null) {
-                logger.warn("Host with id {} not found", id); // Log only necessary info
                 throw new HostServiceException("Host not found");
             }
             hostService.triggerServiceDiscoveryAndMonitor(host.getHostName());
@@ -148,10 +143,7 @@ public class HostWebController {
             response.put("success", true);
             response.put("message", "Service discovery and monitoring initiated successfully!");
             return ResponseEntity.ok(response);
-
         } catch (HostServiceException e) {
-            // Log an error message without stack trace
-            logger.error("Error monitoring host: {}", e.getMessage());
 
             response.put("success", false);
             response.put("message", "Couldn't monitor the host: " + e.getMessage());
@@ -165,7 +157,7 @@ public class HostWebController {
         List<ServiceInfo> servicesOk = hostLiveInfoService.getServiceOKs(hostName);
         model.addAttribute("hostName", hostName);
         model.addAttribute("servicesOk", servicesOk);
-        return "host/service-ok";
+        return "host/services/service-ok";
     }
 
     @GetMapping("/service-warning/{hostName}")
@@ -173,7 +165,7 @@ public class HostWebController {
         List<ServiceInfo> servicesWarning = hostLiveInfoService.getServiceWarnings(hostName);
         model.addAttribute("hostName", hostName);
         model.addAttribute("servicesWarning", servicesWarning);
-        return "host/service-warning";
+        return "host/services/service-warning";
     }
 
     @GetMapping("/service-critical/{hostName}")
@@ -181,7 +173,7 @@ public class HostWebController {
         List<ServiceInfo> servicesCritical = hostLiveInfoService.getServiceCriticals(hostName);
         model.addAttribute("hostName", hostName);
         model.addAttribute("servicesCritical", servicesCritical);
-        return "host/service-critical";
+        return "host/services/service-critical";
     }
 
 
