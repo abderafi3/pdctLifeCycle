@@ -59,16 +59,21 @@
             <div class="modal-body">
                 <div class="mb-3">
                     <label for="userEmail" class="form-label">User Email</label>
-                    <input type="email" class="form-control" id="userEmail">
+                    <input type="email" class="form-control" id="userEmail" placeholder="Enter user email"> <!-- Readonly -->
                 </div>
                 <div class="mb-3">
                     <label for="notificationTitle" class="form-label">Notification Title</label>
-                    <input type="text" class="form-control" id="notificationTitle" placeholder="Enter title">
+                    <input type="text" class="form-control" id="notificationTitle" placeholder="Enter title" required>
                 </div>
                 <div class="mb-3">
                     <label for="notificationMessage" class="form-label">Message</label>
-                    <textarea class="form-control" id="notificationMessage" rows="3" placeholder="Enter message"></textarea>
+                    <textarea class="form-control" id="notificationMessage" rows="3" placeholder="Enter message" required></textarea>
                 </div>
+
+                <!-- Hidden input fields for hostName and userFullName -->
+                <input type="hidden" id="hostName">
+                <input type="hidden" id="userFullName">
+
                 <p id="notificationStatus" style="display: none;"></p>
             </div>
             <div class="modal-footer">
@@ -78,6 +83,7 @@
         </div>
     </div>
 </div>
+
 
 <!-- Delete Confirmation Modal -->
 <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">

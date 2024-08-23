@@ -12,13 +12,27 @@
             <th>Title</th>
             <th>Message</th>
             <th>Date Received</th>
+            <th th:if="${isAdmin}">Status</th>
+            <th th:if="${isAdmin}">Created By</th>
+            <th th:if="${isAdmin}">Host Name</th>
+            <th th:if="${isAdmin}">Assigned User</th>
+            <th th:if="${isAdmin}">Actions</th>
         </tr>
         </thead>
         <tbody>
         <tr th:each="notification : ${notifications}">
-            <td class="title" th:text="${notification.title}"></td>
+            <td th:text="${notification.title}"></td>
             <td th:text="${notification.message}"></td>
             <td><span th:text="${#strings.replace(#strings.substring(notification.createdAt, 0, 16), 'T', ' ')}"></span></td>
+            <td th:if="${isAdmin}" th:text="${notification.read ? 'Read' : 'Unread'}"></td>
+            <td th:if="${isAdmin}" th:text="${notification.createdBy}"></td>
+            <td th:if="${isAdmin}" th:text="${notification.hostName}"></td>
+            <td th:if="${isAdmin}" th:text="${notification.userFullName}"></td>
+            <td th:if="${isAdmin}">
+                <form th:action="@{/notifications/delete/{id}(id=${notification.id})}" method="post">
+                    <button class="btn btn-delete btn-sm" type="submit">Delete</button>
+                </form>
+            </td>
         </tr>
         </tbody>
     </table>

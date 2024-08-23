@@ -8,11 +8,9 @@ import java.util.List;
 
 @Repository
 public interface NotificationRepository extends JpaRepository<HostNotification, Long> {
-
-    // Find notifications by hostUserEmail and where read is false
     List<HostNotification> findByHostUserEmailAndReadFalse(String hostUserEmail);
-
-    // Find all notifications by hostUserEmail
-    List<HostNotification> findByHostUserEmail(String hostUserEmail);
+    List<HostNotification> findByHostUserEmailOrderByCreatedAtDesc(String hostUserEmail);
+    List<HostNotification> findAllByOrderByCreatedAtDesc();
 }
+
 

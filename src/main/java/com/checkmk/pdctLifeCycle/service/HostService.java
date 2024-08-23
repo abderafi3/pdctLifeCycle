@@ -5,13 +5,13 @@ import com.checkmk.pdctLifeCycle.exception.HostServiceException;
 import com.checkmk.pdctLifeCycle.model.Host;
 import com.checkmk.pdctLifeCycle.model.HostLiveInfo;
 import com.checkmk.pdctLifeCycle.model.HostWithLiveInfo;
+import com.checkmk.pdctLifeCycle.model.LdapUser;
 import com.checkmk.pdctLifeCycle.repository.HostRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.ldap.userdetails.LdapUserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.ResourceAccessException;
 
@@ -153,8 +153,8 @@ public class HostService {
 
     private List<Host> getHostsByUserRole(Authentication authentication) {
         if (authentication != null && authentication.isAuthenticated()) {
-            LdapUserDetails userDetails = (LdapUserDetails) authentication.getPrincipal();
-            String username = userDetails.getUsername();
+            LdapUser ldapUser = (LdapUser) authentication.getPrincipal();
+            String username = ldapUser.getUsername();
             boolean isAdmin = authentication.getAuthorities().stream()
                     .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ROLE_ADMIN"));
 

@@ -196,7 +196,7 @@ const createHostRow = (hostWithLiveInfo, isAdminUser) => {
     const row = document.createElement('tr');
     row.innerHTML = `
         <td>${host.hostName}</td>
-        ${isAdminUser ? `<td>${host.hostUser ? `<a href="#" data-email="${host.hostUserEmail}" onclick="showNotificationModal(this)">${host.hostUser}</a>` : 'None'}</td>` : ''}
+        ${isAdminUser ? `<td>${host.hostUser ? `<a href="#" data-email="${host.hostUserEmail}" data-host-name="${host.hostName}"   data-user-full-name="${host.hostUser}"  onclick="showNotificationModal(this)">${host.hostUser}</a>` : 'None'}</td>` : ''}
         <td>${host.ipAddress}</td>
         <td>${host.creationDate}</td>
         <td>${host.expirationDate || 'None'}</td>
@@ -275,13 +275,19 @@ const showModalMessage = (title, message) => {
 // Show the notification modal
 const showNotificationModal = (element) => {
     const email = element.getAttribute('data-email');
+    const hostName = element.getAttribute('data-host-name');
+    const userFullName = element.getAttribute('data-user-full-name');
+
     document.getElementById('userEmail').value = email;
+    document.getElementById('hostName').value = hostName;
+    document.getElementById('userFullName').value = userFullName;
     document.getElementById('notificationTitle').value = '';
     document.getElementById('notificationMessage').value = '';
 
     const sendNotificationModal = new bootstrap.Modal(document.getElementById('sendNotificationModal'));
     sendNotificationModal.show();
 };
+
 
 // Check if user is an admin
 const isAdmin = () => {
@@ -340,18 +346,21 @@ const showLoadingSpinner = () => {
     statusMessage.textContent = 'Processing...';
 };
 
+// Function to send manual notification
 const sendNotification = () => {
     const email = document.getElementById('userEmail').value;
     const title = document.getElementById('notificationTitle').value;
     const message = document.getElementById('notificationMessage').value;
-    const notificationStatus = document.getElementById('notificationStatus'); // Status element
+    const hostName = document.getElementById('hostName').value;
+    const userFullName = document.getElementById('userFullName').value;
+    const notificationStatus = document.getElementById('notificationStatus');
 
     fetch('/sendNotification', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ email, title, message })
+        body: JSON.stringify({ email, title, message, hostName, userFullName })
     })
     .then(response => {
         if (response.ok) {
@@ -364,7 +373,7 @@ const sendNotification = () => {
                 const sendNotificationModal = bootstrap.Modal.getInstance(document.getElementById('sendNotificationModal'));
                 sendNotificationModal.hide();
                 notificationStatus.style.display = 'none';
-            }, 2000);
+            }, 1000);
 
         } else {
             notificationStatus.style.color = 'red';
@@ -379,3 +388,21 @@ const sendNotification = () => {
         console.error('Error sending notification:', error);
     });
 };
+
+const filterTable = () => {
+    const filterHostName = document.getElementById('filterHostName').value.toLowerCase();
+    const filterAssignedUser = document.getElementById('filterAssignedUser').value.toLowerCase();
+    const rows = [...document.querySelectorAll('#notificationTable tr')];
+
+    rows.forEach(row => {
+        const hostNameCell = row.querySelectorAll('td')[5];
+        const assignedUserCell = row.querySelectorAll('td')[6];
+
+        const hostNameText = hostNameCell?.textContent.toLowerCase() || '';
+        const assignedUserText = assignedUserCell?.textContent.toLowerCase() || '';
+
+        row.style.display = (hostNameText.includes(filterHostName) && assignedUserText.includes(filterAssignedUser)) ? '' : 'none';
+    });
+};
+
+

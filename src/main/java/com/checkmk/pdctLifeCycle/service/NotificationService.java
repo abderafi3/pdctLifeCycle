@@ -41,16 +41,19 @@ public class NotificationService {
         this.javaMailSender = javaMailSender;
     }
 
-
     // Store the last known number of critical services for each host
     private final Map<String, Integer> criticalServiceCountMap = new ConcurrentHashMap<>();
+
+    public List<HostNotification> getAllNotificationsSortedByDate() {
+        return notificationRepository.findAllByOrderByCreatedAtDesc();
+    }
 
     public List<HostNotification> getUnreadNotifications(String hostUserEmail) {
         return notificationRepository.findByHostUserEmailAndReadFalse(hostUserEmail);
     }
 
     public List<HostNotification> getAllNotificationsForUser(String hostUserEmail) {
-        return notificationRepository.findByHostUserEmail(hostUserEmail);
+        return notificationRepository.findByHostUserEmailOrderByCreatedAtDesc(hostUserEmail);
     }
 
     public void markNotificationAsRead(Long notificationId) {
@@ -60,13 +63,13 @@ public class NotificationService {
         });
     }
 
-    public void createNotification(String hostUserEmail, String title, String message) {
-        HostNotification hostNotification = new HostNotification(title, message, hostUserEmail);
+    public void createNotification(String hostUserEmail, String title, String summary, String createdBy, String hostName, String userFullName) {
+        HostNotification hostNotification = new HostNotification(title, summary, hostUserEmail, createdBy, hostName, userFullName);
         notificationRepository.save(hostNotification);
     }
 
     @Scheduled(cron = "0 0 6 * * ?") // Run every day at 06:00 AM
-    public void checkForExpiringHosts() {
+    public void checkForExpiringHosts() throws MessagingException {
         LocalDate today = LocalDate.now();
         LocalDate threeDaysFromNow = today.plusDays(3);
 
@@ -77,11 +80,11 @@ public class NotificationService {
             if (expirationDateString == null || expirationDateString.trim().isEmpty()) {
                 continue;
             }
-                LocalDate expirationDate = LocalDate.parse(expirationDateString);
-                if (!expirationDate.isAfter(threeDaysFromNow)) {
-                    int daysRemaining = (int) java.time.temporal.ChronoUnit.DAYS.between(today, expirationDate);
-                    sendExpirationWarning(host, daysRemaining);
-                }
+            LocalDate expirationDate = LocalDate.parse(expirationDateString);
+            if (!expirationDate.isAfter(threeDaysFromNow)) {
+                int daysRemaining = (int) java.time.temporal.ChronoUnit.DAYS.between(today, expirationDate);
+                sendExpirationWarning(host, daysRemaining);
+            }
         }
     }
 
@@ -107,64 +110,64 @@ public class NotificationService {
         }
     }
 
-    private void sendExpirationWarning(Host host, int daysRemaining) {
+    private void sendExpirationWarning(Host host, int daysRemaining) throws MessagingException {
         String hostUserEmail = host.getHostUserEmail();
-
+        String userFullName = host.getHostUser();
         if (hostUserEmail != null && daysRemaining >= 0) {
             String subject = "Host Expiration Warning: " + host.getHostName();
-            String message = String.format("Dear %s,<br><br>Your host <b>%s</b> will expire in <b>%d</b> day(s).<br>" +
-                            "Please take the necessary action.<br><br>Best regards,<br>Host Management Team",
-                    hostUserEmail, host.getHostName(), daysRemaining);
+            String summary = "Host " + host.getHostName() + " will expire in " + daysRemaining + " day(s).";
 
-            sendEmailAndCreateNotification(hostUserEmail, subject, message);
+            sendEmailAndCreateNotification(hostUserEmail, subject, summary, "System", host.getHostName(), userFullName, daysRemaining);
         }
     }
 
-    private void sendCriticalServiceNotification(Host host, int oldCount, int newCount) {
+    private void sendCriticalServiceNotification(Host host, int oldCount, int newCount) throws MessagingException {
         String hostUserEmail = host.getHostUserEmail();
+        String userFullName = host.getHostUser();
 
         if (hostUserEmail != null) {
             String subject = "Critical Service Alert for Host: " + host.getHostName();
-            String message = String.format("Dear %s,<br><br>The number of critical services for your host <b>%s</b> has increased.<br>" +
-                            "Previous count: <b>%d</b><br>Current count: <b>%d</b><br><br>" +
-                            "Please check the host and resolve the issues.<br><br>Best regards,<br>Host Management Team",
-                    hostUserEmail, host.getHostName(), oldCount, newCount);
+            String summary = "Critical services increased from " + oldCount + " to " + newCount + " for host " + host.getHostName() + ".";
 
-            sendEmailAndCreateNotification(hostUserEmail, subject, message);
+            sendEmailAndCreateNotification(hostUserEmail, subject, summary, "System", host.getHostName(), userFullName, oldCount, newCount);
         }
     }
 
-    public void sendEmail(String to, String subject, String text) {
-        try {
-            MimeMessage message = javaMailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true);
-            helper.setFrom(fromName + " <" + fromEmail + ">");
-            helper.setTo(to);
-            helper.setSubject(subject);
-            helper.setText(text, true);
+    public void sendEmail(String to, String subject, String body) throws MessagingException {
 
-            javaMailSender.send(message);
-        } catch (MessagingException e) {
-            e.printStackTrace();
-        }
+        MimeMessage message = javaMailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true);
+        helper.setFrom(fromName + " <" + fromEmail + ">");
+        helper.setTo(to);
+        helper.setSubject(subject);
+
+        // Use a more formatted email body, separating the logic from what is stored in the database
+        String formattedBody = """
+            <div style="font-family: Arial, sans-serif;">
+                <p>Dear %s,</p>
+                <p>%s</p>
+                <p>Best regards,<br>Host Management Team</p>
+            </div>
+        """.formatted(to, body);
+
+        helper.setText(formattedBody, true);
+
+        javaMailSender.send(message);
     }
 
-    private void sendEmailAndCreateNotification(String hostUserEmail, String subject, String messageBody) {
-        try {
-            sendEmail(hostUserEmail, subject, messageBody);
-            createNotification(hostUserEmail, subject, messageBody);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    private void sendEmailAndCreateNotification(String hostUserEmail, String subject, String summary, String createdBy, String hostName, String userFullName, int... counts) throws MessagingException {
+        // Send email
+        sendEmail(hostUserEmail, subject, summary);
+
+        // Create a notification with the summary
+        createNotification(hostUserEmail, subject, summary, createdBy, hostName, userFullName);
     }
 
-    public String sendManualNotification(String email, String title, String messageBody, String hostUserEmail) {
-        try {
-            sendEmailAndCreateNotification(hostUserEmail, title, messageBody);
-            return "Notification sent successfully!";
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "Failed to send notification.";
-        }
+    public void sendManualNotification(String email, String title, String summary, String adminName, String hostName, String userFullName) throws MessagingException {
+        sendEmailAndCreateNotification(email, title, summary, adminName, hostName, userFullName);
+    }
+
+    public void deleteNotification(Long id) {
+        notificationRepository.deleteById(id);
     }
 }

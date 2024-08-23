@@ -1,18 +1,13 @@
 package com.checkmk.pdctLifeCycle.config;
 
+import com.checkmk.pdctLifeCycle.model.CustomLdapUserDetailsContextMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.authority.mapping.GrantedAuthoritiesMapper;
 import org.springframework.security.ldap.authentication.ad.ActiveDirectoryLdapAuthenticationProvider;
 import org.springframework.security.web.SecurityFilterChain;
-
-import java.util.ArrayList;
-import java.util.Collection;
 
 @Configuration
 @EnableWebSecurity
@@ -46,26 +41,13 @@ public class SecurityConfig {
     public ActiveDirectoryLdapAuthenticationProvider activeDirectoryLdapAuthenticationProvider() {
         ActiveDirectoryLdapAuthenticationProvider provider =
                 new ActiveDirectoryLdapAuthenticationProvider(ldapDomain, ldapUrl);
+
         provider.setConvertSubErrorCodesToExceptions(true);
         provider.setUseAuthenticationRequestCredentials(true);
-        provider.setAuthoritiesMapper(grantedAuthoritiesMapper());
+
+        // Use the custom UserDetailsContextMapper
+        provider.setUserDetailsContextMapper(new CustomLdapUserDetailsContextMapper());
+
         return provider;
-    }
-
-
-    @Bean
-    public GrantedAuthoritiesMapper grantedAuthoritiesMapper() {
-        return authorities -> {
-            Collection<GrantedAuthority> mappedAuthorities = new ArrayList<>();
-            for (GrantedAuthority authority : authorities) {
-                String normalizedAuthority = authority.getAuthority().toLowerCase();
-                if (normalizedAuthority.contains("administrators")) {
-                    mappedAuthorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
-                } else {
-                    mappedAuthorities.add(authority);
-                }
-            }
-            return mappedAuthorities;
-        };
     }
 }
