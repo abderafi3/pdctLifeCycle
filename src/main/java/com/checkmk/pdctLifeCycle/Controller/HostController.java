@@ -22,7 +22,7 @@ public class HostController {
             @RequestParam String password) {
         try {
             String result = sshService.installCheckmkAgent(host, username, password);
-            return ResponseEntity.ok("Agent installation successful." /* + result*/);
+            return ResponseEntity.ok("Agent installation successful."  + result);
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Error during agent installation: " + e.getMessage());
         }

@@ -47,7 +47,7 @@ const handleAddHostFormSubmit = async (event) => {
         } else if (expirationDate && !isValidExpirationDate(expirationDate)) {
             showErrorModal('Expiration date must be in the future.');
         } else {
-            showLoadingSpinner();
+            showOverlay("Adding host");
             setTimeout(() => document.getElementById('addHostForm').submit(), 500);
         }
     } catch (error) {
@@ -71,7 +71,7 @@ const handleEditHostFormSubmit = (event) => {
         return;
     }
 
-    showLoadingSpinner();
+    showOverlay("Editing host");
     setTimeout(() => document.getElementById('editHostForm').submit(), 500);
 };
 
@@ -394,13 +394,6 @@ const showErrorModal = (message) => {
     errorModal.show();
 };
 
-// Function to show loading spinner and overlay
-const showLoadingSpinner = () => {
-    const overlay = document.getElementById('loadingOverlay');
-    const statusMessage = document.getElementById('statusMessage');
-    overlay.style.display = 'flex';
-    statusMessage.textContent = 'Processing...';
-};
 
 // Function to send manual notification
 const sendNotification = () => {
@@ -477,37 +470,64 @@ function openInstallAgentModal(hostIp) {
     installAgentModal.show();
 }
 
+
 // Function to submit the agent installation request
 function submitAgentInstall() {
     const host = document.getElementById('hostIp').value;
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
-    const installStatus = document.getElementById('installStatus');
 
+    // Ensure both username and password are provided
     if (!username || !password) {
-        installStatus.style.display = 'block';
-        installStatus.textContent = 'Please enter both username and password.';
+        document.getElementById('installStatus').style.display = 'block';
+        document.getElementById('installStatus').textContent = 'Please enter both username and password.';
         return;
     }
 
-    installStatus.style.display = 'block';
-    installStatus.textContent = 'Installing agent...';
+    // Hide the install agent modal
+    const installAgentModal = bootstrap.Modal.getInstance(document.getElementById('installAgentModal'));
+    installAgentModal.hide();
 
-    fetch(`/hosts/install-agent`, {
+    // Show the overlay while processing
+    showOverlay('Installing agent...');
+
+    // Set a timeout for the fetch request
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+        controller.abort();
+    }, 30000);
+
+    // Make the API call to install the agent
+    fetch(`/api/hosts/install-agent`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: new URLSearchParams({ host, username, password })
+        body: new URLSearchParams({
+            host: host,
+            username: username,
+            password: password
+        }),
+        signal: controller.signal
     })
-    .then(response => response.text())
+    .then(response => {
+        clearTimeout(timeoutId);
+        return response.text();
+    })
     .then(result => {
-        installStatus.textContent = result;
+        hideOverlay();
+        showModalMessage('Agent Installation', result);
     })
     .catch(error => {
-        installStatus.textContent = 'Error during agent installation: ' + error.message;
+        hideOverlay();  // Hide the overlay in case of error
+        if (error.name === 'AbortError') {
+            showModalMessage('Agent Installation', 'Installation request timed out. Please try again.');
+        } else {
+            showModalMessage('Agent Installation', 'Error during agent installation: ' + error.message);
+        }
     });
 }
+
 
 
 
