@@ -113,6 +113,12 @@ tr:nth-child(even) {
     border: none;
 }
 
+.btn-agent {
+    background-color: #00478e;
+    color: white;
+    border: none;
+}
+
 .btn-monitor {
     background-color: #008000;
     color: white;

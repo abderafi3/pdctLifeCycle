@@ -5,10 +5,7 @@ import com.checkmk.pdctLifeCycle.model.Host;
 import com.checkmk.pdctLifeCycle.model.HostWithLiveInfo;
 import com.checkmk.pdctLifeCycle.model.LdapUser;
 import com.checkmk.pdctLifeCycle.model.ServiceInfo;
-import com.checkmk.pdctLifeCycle.service.HostImportService;
-import com.checkmk.pdctLifeCycle.service.HostLiveInfoService;
-import com.checkmk.pdctLifeCycle.service.HostService;
-import com.checkmk.pdctLifeCycle.service.LdapUserService;
+import com.checkmk.pdctLifeCycle.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,14 +27,16 @@ public class HostWebController {
     private final HostImportService hostImportService;
     private final LdapUserService ldapUserService;
     private final HostLiveInfoService hostLiveInfoService;
+    private final SshService sshService;
 
     @Autowired
     public HostWebController(HostService hostService, HostImportService hostImportService,
-                             LdapUserService ldapUserService,HostLiveInfoService hostLiveInfoService) {
+                             LdapUserService ldapUserService,HostLiveInfoService hostLiveInfoService, SshService sshService) {
         this.hostService = hostService;
         this.hostImportService = hostImportService;
         this.ldapUserService = ldapUserService;
         this.hostLiveInfoService = hostLiveInfoService;
+        this.sshService = sshService;
     }
 
     @GetMapping
@@ -174,6 +173,20 @@ public class HostWebController {
         model.addAttribute("hostName", hostName);
         model.addAttribute("servicesCritical", servicesCritical);
         return "host/services/service-critical";
+    }
+
+    @PostMapping("/install-agent")
+    @ResponseBody
+    public ResponseEntity<String> installAgent(
+            @RequestParam String host,
+            @RequestParam String username,
+            @RequestParam String password) {
+        try {
+            String result = sshService.installCheckmkAgent(host, username, password);
+            return ResponseEntity.ok("Agent installation successful." /* + result*/);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error during agent installation: " + e.getMessage());
+        }
     }
 
 

@@ -196,7 +196,7 @@ const createHostRow = (hostWithLiveInfo, isAdminUser) => {
     const row = document.createElement('tr');
     row.innerHTML = `
         <td>${host.hostName}</td>
-        ${isAdminUser ? `<td>${host.hostUser ? `<a href="#" data-email="${host.hostUserEmail}" data-host-name="${host.hostName}"   data-user-full-name="${host.hostUser}"  onclick="showNotificationModal(this)">${host.hostUser}</a>` : 'None'}</td>` : ''}
+        ${isAdminUser ? `<td>${host.hostUser ? `<a href="#" data-email="${host.hostUserEmail}" data-host-name="${host.hostName}" data-user-full-name="${host.hostUser}" onclick="showNotificationModal(this)">${host.hostUser}</a>` : 'None'}</td>` : ''}
         <td>${host.ipAddress}</td>
         <td>${host.creationDate}</td>
         <td>${host.expirationDate || 'None'}</td>
@@ -206,24 +206,28 @@ const createHostRow = (hostWithLiveInfo, isAdminUser) => {
         <td><a href="hosts/service-critical/${host.hostName}">${liveInfo.serviceCritical}</a></td>
     `;
     if (isAdminUser) {
-        row.appendChild(createActionButtons(host.id));
+        row.appendChild(createActionButtons(host.id, host.ipAddress));
     }
     return row;
 };
+
 
 // Get host state class
 const getHostStateClass = (state) => state === 'UP' ? 'status-up' : state === 'DOWN' ? 'status-down' : 'status-unknown';
 
 // Create action buttons for admin
-const createActionButtons = (hostId) => {
+const createActionButtons = (hostId, hostIp) => {
     const actionCell = document.createElement('td');
     actionCell.innerHTML = `
-        <button type="button" class="btn btn-monitor btn-sm" onclick="monitorHost('${hostId}')">Monitor</button>
         <button type="button" class="btn btn-update btn-sm" onclick="editHost('${hostId}')">Update</button>
         <button type="button" class="btn btn-delete btn-sm" onclick="confirmDeleteHost('${hostId}')">Delete</button>
+        <button type="button" class="btn btn-agent btn-sm" onclick="openInstallAgentModal('${hostIp}')">Install Agent</button>
+        <button type="button" class="btn btn-monitor btn-sm" onclick="monitorHost('${hostId}')">Monitor</button>
     `;
     return actionCell;
 };
+
+
 
 // Monitor host
 const monitorHost = async (id) => {
@@ -456,5 +460,57 @@ const filterTable = () => {
         row.style.display = (hostNameText.includes(filterHostName) && assignedUserText.includes(filterAssignedUser)) ? '' : 'none';
     });
 };
+
+
+// Function to open the Install Agent Modal and pass the host IP
+function openInstallAgentModal(hostIp) {
+    // Set the host IP in the modal's input field
+    document.getElementById('hostIp').value = hostIp;
+
+    // Reset the username, password, and status message fields
+    document.getElementById('username').value = '';
+    document.getElementById('password').value = '';
+    document.getElementById('installStatus').style.display = 'none';
+
+    // Open the modal
+    const installAgentModal = new bootstrap.Modal(document.getElementById('installAgentModal'));
+    installAgentModal.show();
+}
+
+// Function to submit the agent installation request
+function submitAgentInstall() {
+    const host = document.getElementById('hostIp').value;
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    const installStatus = document.getElementById('installStatus');
+
+    if (!username || !password) {
+        installStatus.style.display = 'block';
+        installStatus.textContent = 'Please enter both username and password.';
+        return;
+    }
+
+    installStatus.style.display = 'block';
+    installStatus.textContent = 'Installing agent...';
+
+    fetch(`/hosts/install-agent`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({ host, username, password })
+    })
+    .then(response => response.text())
+    .then(result => {
+        installStatus.textContent = result;
+    })
+    .catch(error => {
+        installStatus.textContent = 'Error during agent installation: ' + error.message;
+    });
+}
+
+
+
+
 
 
