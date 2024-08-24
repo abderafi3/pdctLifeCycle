@@ -9,7 +9,7 @@
         <table class="table table-striped">
             <thead>
             <tr>
-                <th><input type="checkbox" onclick="toggleSelectAll(this)"></th>
+                <th><input type="checkbox" id="selectAllCheckbox"></th>
                 <th>Host Name</th>
                 <th>IP Address</th>
                 <th>Creation Date</th>
@@ -24,7 +24,7 @@
             </tr>
             </tbody>
         </table>
-        <button type="submit" class="btn btn-primary">Import</button>
+        <button type="submit" id="importButton" class="btn btn-primary" disabled>Import</button>
     </form>
 
     <h3 class="mt-4">Database Hosts</h3>
@@ -50,8 +50,3 @@
 <script th:src="@{/js/script.js}"></script>
 </body>
 </html>
-
-
-
-
-

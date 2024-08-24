@@ -314,10 +314,62 @@ const deleteHost = () => {
 };
 
 // Function to toggle the selection of all checkboxes in import.html
-const toggleSelectAll = (source) => {
+document.addEventListener('DOMContentLoaded', () => {
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+    const importButton = document.getElementById('importButton');
     const checkboxes = document.querySelectorAll('input[name="selectedHostIds"]:not(:disabled)');
-    checkboxes.forEach(checkbox => checkbox.checked = source.checked);
-};
+
+    // Run the following code only if the elements exist on the page
+    if (selectAllCheckbox && importButton) {
+        let checkboxArray = Array.from(checkboxes);
+
+        // Disable select all checkbox if no hosts to select
+        function updateSelectAllCheckboxState() {
+            selectAllCheckbox.disabled = checkboxArray.length === 0;
+        }
+
+        // Initial check to disable "Select All" if no checkboxes
+        updateSelectAllCheckboxState();
+
+        // Event listener for individual checkboxes
+        checkboxArray.forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                toggleImportButton();
+                updateSelectAllCheckboxState();  // Recheck to disable "Select All" if necessary
+                updateSelectAllCheckbox();  // Update "Select All" state
+            });
+        });
+
+        // Event listener for "Select All" checkbox
+        selectAllCheckbox.addEventListener('change', toggleSelectAll);
+
+        // Function to toggle all checkboxes when "Select All" is clicked
+        function toggleSelectAll() {
+            const isChecked = selectAllCheckbox.checked;
+            checkboxArray.forEach(checkbox => {
+                checkbox.checked = isChecked;
+            });
+            toggleImportButton();
+        }
+
+        // Function to enable or disable the "Import" button
+        function toggleImportButton() {
+            const anyChecked = checkboxArray.some(checkbox => checkbox.checked);
+            importButton.disabled = !anyChecked;
+        }
+
+        // Function to update the state of the "Select All" checkbox
+        function updateSelectAllCheckbox() {
+            const allChecked = checkboxArray.every(checkbox => checkbox.checked);
+            selectAllCheckbox.checked = allChecked;
+        }
+
+        // Initial toggle of the import button based on pre-checked boxes (if any)
+        toggleImportButton();
+    }
+});
+
+
 
 // Function to validate IP address format
 const isValidIP = (ipAddress) => {
