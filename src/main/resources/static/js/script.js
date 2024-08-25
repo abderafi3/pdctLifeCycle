@@ -311,10 +311,16 @@ const confirmDeleteHost = (id) => {
     deleteModal.show();
 };
 
-// Function to delete a host
+// Function to handle the delete host operation with simulated delay
 const deleteHost = () => {
-    const id = document.getElementById('confirmDeleteButton').getAttribute('data-id');
-    window.location.href = `/hosts/delete/${id}`;
+    const hostId = document.getElementById('confirmDeleteButton').getAttribute('data-id');
+ const deleteModal = bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal'));
+    deleteModal.hide();
+    showOverlay('Deleting host...');
+        window.location.href = `/hosts/delete/${hostId}`;
+    setTimeout(() => {
+        hideOverlay();
+    }, 1000);
 };
 
 // Function to toggle the selection of all checkboxes in import.html
