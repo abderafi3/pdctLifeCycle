@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         fetchLiveHostData().then(() => toggleLoader(loader, tableContainer, false));
 
-        setInterval(fetchLiveHostData, 10000);
+        setInterval(fetchLiveHostData, 5000);
     }
 
     setupFormSubmit('addHostForm', handleAddHostFormSubmit);
@@ -320,7 +320,7 @@ const deleteHost = () => {
         window.location.href = `/hosts/delete/${hostId}`;
     setTimeout(() => {
         hideOverlay();
-    }, 1000);
+    }, 2000);
 };
 
 // Function to toggle the selection of all checkboxes in import.html
