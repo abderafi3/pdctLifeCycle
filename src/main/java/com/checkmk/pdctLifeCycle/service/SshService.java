@@ -90,7 +90,7 @@ public class SshService {
             // Generate appropriate install command based on distribution
             if (distro.contains("ubuntu") || distro.contains("debian")) {
                 return "wget " + checkmkConfig.getApiUrl() + "/agents/check-mk-agent_2.3.0p4-1_all.deb -O /tmp/check-mk-agent.deb && dpkg -i /tmp/check-mk-agent.deb";
-            } else if (distro.contains("centos") || distro.contains("redhat") || distro.contains("fedora")) {
+            } else if (distro.contains("centos") || distro.contains("redhat") || distro.contains("fedora") || distro.contains("ol")) {
                 return "wget " + checkmkConfig.getApiUrl() + "/agents/check-mk-agent-2.3.0p4-1.noarch.rpm -O /tmp/check-mk-agent.rpm && yum install -y /tmp/check-mk-agent.rpm";
             } else {
                 throw new Exception("Unsupported Linux distribution: " + distro);
