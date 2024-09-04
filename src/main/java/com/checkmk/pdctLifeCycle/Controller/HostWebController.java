@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/hosts")
@@ -40,41 +41,54 @@ public class HostWebController {
     }
 
     @GetMapping
-    public String getHostsPage(Model model, Authentication authentication) throws Exception {
-        List<String> roles = authentication.getAuthorities()
-                .stream()
+    public String getHostsPage(Model model, Authentication authentication) {
+        List<LdapUser> users = ldapUserService.getAllUsers();
+        LdapUser currentUser = (LdapUser) authentication.getPrincipal();
+        List<String> roles = currentUser.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
-                .toList();
+                .collect(Collectors.toList());
+        List<Host> hosts = hostService.getHostsByUserRole(authentication);
+        model.addAttribute("hosts", hosts);
         model.addAttribute("userRoles", roles);
         model.addAttribute("pageTitle", "Hosts with Live Info");
-        model.addAttribute("userRoles", authentication.getAuthorities());
         return "host/list";
     }
 
     @GetMapping("/live-data")
     @ResponseBody
-    public List<HostWithLiveInfo> getLiveHostData(Authentication authentication) throws Exception {
+    public List<HostWithLiveInfo> getLiveHostData(Authentication authentication) {
         return hostService.getHostsWithLiveInfo(authentication);
     }
 
     @GetMapping("/add")
-    public String showAddHostForm(Model model) {
+    public String showAddHostForm(Model model, Authentication authentication) {
+        LdapUser currentUser = (LdapUser) authentication.getPrincipal();
+        List<LdapUser> users = getUsersBasedOnRole(currentUser);
         model.addAttribute("host", new Host());
+        model.addAttribute("users", users);
         model.addAttribute("pageTitle", "Add Host");
         return "host/add";
     }
 
 
     @PostMapping("/add")
-    public String addHost(@ModelAttribute Host host) throws HostServiceException {
+    public String addHost(@RequestParam("user") String userEmail, @ModelAttribute Host host) throws HostServiceException {
+        LdapUser assignedUser = ldapUserService.findUserByEmail(userEmail);
+        if (assignedUser != null) {
+            host.setHostUser(assignedUser.getFirstName() + ' ' + assignedUser.getLastName());
+            host.setHostUserEmail(assignedUser.getEmail());
+        }
         hostService.addHost(host);
         return "redirect:/hosts";
     }
 
+
     @GetMapping("/edit/{id}")
-    public String showEditHostForm(@PathVariable String id, Model model) {
+    public String showEditHostForm(@PathVariable String id, Model model, Authentication authentication) {
         Host host = hostService.getHostById(id);
-        List<LdapUser> users = ldapUserService.getAllUsers();
+        LdapUser currentUser = (LdapUser) authentication.getPrincipal();
+        List<LdapUser> users = getUsersBasedOnRole(currentUser);
+
         model.addAttribute("host", host);
         model.addAttribute("users", users);
         model.addAttribute("pageTitle", "Edit Host");
@@ -114,7 +128,6 @@ public class HostWebController {
         hostImportService.saveSelectedHosts(selectedHostIds);
         return "redirect:/hosts/import";
     }
-
 
     @GetMapping("/validate-hostname")
     @ResponseBody
@@ -189,5 +202,38 @@ public class HostWebController {
         }
     }
 
+    private List<LdapUser> getUsersBasedOnRole(LdapUser currentUser) {
+        List<String> roles = currentUser.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toList());
+
+        if (roles.contains("ROLE_ADMIN")) {
+            return ldapUserService.getAllUsers();
+        } else if (roles.contains("ROLE_DEPARTMENTHEAD")) {
+            String department = currentUser.getDepartment();
+            if (department != null) {
+                return ldapUserService.getAllUsers().stream()
+                        .filter(user -> department.equals(user.getDepartment()))
+                        .collect(Collectors.toList());
+            } else {
+                return List.of();
+            }
+        } else if (roles.contains("ROLE_TEAMLEADER")) {
+            String team = currentUser.getTeam();
+            if (team != null) {
+                return ldapUserService.getAllUsers().stream()
+                        .filter(user -> team.equals(user.getTeam()))
+                        .collect(Collectors.toList());
+            } else {
+
+                return List.of();
+            }
+        }
+        return List.of();
+    }
+
 
 }
+
+
+

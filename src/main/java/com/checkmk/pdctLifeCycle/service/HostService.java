@@ -2,15 +2,10 @@ package com.checkmk.pdctLifeCycle.service;
 
 import com.checkmk.pdctLifeCycle.config.CheckmkConfig;
 import com.checkmk.pdctLifeCycle.exception.HostServiceException;
-import com.checkmk.pdctLifeCycle.model.Host;
-import com.checkmk.pdctLifeCycle.model.HostLiveInfo;
-import com.checkmk.pdctLifeCycle.model.HostWithLiveInfo;
-import com.checkmk.pdctLifeCycle.model.LdapUser;
+import com.checkmk.pdctLifeCycle.model.*;
 import com.checkmk.pdctLifeCycle.repository.HostRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -31,17 +26,20 @@ public class HostService {
     private final ObjectMapper objectMapper;
     private final RestClientService restClientService;
     private final HostLiveInfoService hostLiveInfoService;
+    private final LdapUserService ldapUserService;
 
    private final WebClient webClient;
 
     @Autowired
     public HostService(HostRepository hostRepository, CheckmkConfig checkmkConfig,
                        ObjectMapper objectMapper, RestClientService restClientService,
-                       HostLiveInfoService hostLiveInfoService, WebClient.Builder webClientBuilder) {
+                       HostLiveInfoService hostLiveInfoService, WebClient.Builder webClientBuilder,
+                       LdapUserService ldapUserService) {
         this.hostRepository = hostRepository;
         this.checkmkConfig = checkmkConfig;
         this.objectMapper = objectMapper;
         this.restClientService = restClientService;
+        this.ldapUserService = ldapUserService;
         this.hostLiveInfoService = hostLiveInfoService;
         this.webClient = webClientBuilder.baseUrl(checkmkConfig.getApiUrl()).build();
     }
@@ -72,60 +70,39 @@ public class HostService {
     }
 
     public Host addHost(Host host) throws HostServiceException {
+        if (hostExistsInDatabase(host.getHostName()) || hostExistsInCheckmk(host.getHostName())) {
+            throw new HostServiceException("Host name already exists.");
+        }
+
         host.setId(host.getHostName());
-
-        // Check if hostname exists in the database
-        if (hostRepository.existsByHostName(host.getHostName())) {
-            throw new HostServiceException("Host name already exists in the database.");
-        }
-
-        // Check if hostname exists in Checkmk
-        if (hostExistsInCheckmk(host.getHostName())) {
-            throw new HostServiceException("Host name already exists in Checkmk.");
-        }
-
-        String apiUrl = checkmkConfig.getApiUrl() + "/api/1.0/domain-types/host_config/collections/all";
-
         try {
-            // Payload for Checkmk API
-            ObjectNode payload = objectMapper.createObjectNode();
-            payload.put("folder", "/");
-            payload.put("host_name", host.getHostName());
-            ObjectNode attribute = objectMapper.createObjectNode();
-            attribute.put("ipaddress", host.getIpAddress());
-            payload.set("attributes", attribute);
+            ObjectNode payload = buildCheckmkPayload(host);
+            String apiUrl = checkmkConfig.getApiUrl() + "/api/1.0/domain-types/host_config/collections/all";
 
-            // Save host in Checkmk
             restClientService.sendPostRequest(apiUrl, payload.toString());
-            this.checkmkActivateChanges();
+            checkmkActivateChanges();
 
-            // Save the host in the database
             host.setCreationDate(LocalDate.now().toString());
             return hostRepository.save(host);
         } catch (Exception e) {
-            throw new HostServiceException("Couldn't add a new host", e);
+            throw new HostServiceException("Couldn't add the new host", e);
         }
     }
 
+    // Update an existing host
     public Host updateHost(Host host) throws HostServiceException {
+        Host existingHost = getHostById(host.getId());
+        if (existingHost == null) throw new HostServiceException("Host not found");
+
+        String hostName = existingHost.getHostName();
+        String apiUrl = checkmkConfig.getApiUrl() + "/api/1.0/objects/host_config/" + hostName;
+
         try {
-            Host existingHost = getHostById(host.getId());
-            if (existingHost == null) {
-                throw new HostServiceException("Host not found");
-            }
-
-            String hostName = existingHost.getHostName();
-            String apiUrl = checkmkConfig.getApiUrl() + "/api/1.0/objects/host_config/" + hostName;
-
-            ObjectNode payload = objectMapper.createObjectNode();
-            ObjectNode attributes = objectMapper.createObjectNode();
-            attributes.put("ipaddress", host.getIpAddress());
-            payload.set("attributes", attributes);
-
+            ObjectNode payload = buildUpdatePayload(host);
             String eTag = getHostETag(hostName);
 
             restClientService.sendPutRequest(apiUrl, payload.toString(), eTag);
-            this.checkmkActivateChanges();
+            checkmkActivateChanges();
 
             host.setHostName(hostName);
             host.setCreationDate(existingHost.getCreationDate());
@@ -135,20 +112,17 @@ public class HostService {
         }
     }
 
+    // Delete a host from both the database and Checkmk
     public void deleteHost(String id) throws HostServiceException {
+        Host host = getHostById(id);
+        if (host == null) throw new HostServiceException("Host not found");
+
+        String apiUrl = checkmkConfig.getApiUrl() + "/api/1.0/objects/host_config/" + host.getHostName();
         try {
-            Host host = getHostById(id);
-            if (host != null) {
-                String eTag = getHostETag(host.getHostName());
-                String apiUrl = checkmkConfig.getApiUrl() + "/api/1.0/objects/host_config/" + host.getHostName();
-
-                restClientService.sendDeleteRequest(apiUrl, eTag);
-                this.checkmkActivateChanges();
-
-                hostRepository.delete(host);
-            } else {
-                throw new HostServiceException("Host not found");
-            }
+            String eTag = getHostETag(host.getHostName());
+            restClientService.sendDeleteRequest(apiUrl, eTag);
+            checkmkActivateChanges();
+            hostRepository.delete(host);
         } catch (Exception e) {
             throw new HostServiceException("Couldn't delete the host", e);
         }
@@ -159,38 +133,46 @@ public class HostService {
         return enrichHostsWithLiveInfo(hosts);
     }
 
-    private List<Host> getHostsByUserRole(Authentication authentication) {
-        if (authentication != null && authentication.isAuthenticated()) {
-            LdapUser ldapUser = (LdapUser) authentication.getPrincipal();
-            String username = ldapUser.getUsername();
-            boolean isAdmin = authentication.getAuthorities().stream()
-                    .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ROLE_ADMIN"));
-
-            if (isAdmin) {
-                return getAllHosts();  // Admin gets all hosts
-            } else {
-                return getHostsByUsername(username);  // Non-admin users get their own hosts
-            }
+    public List<Host> getHostsByUserRole(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return new ArrayList<>();
         }
-        return new ArrayList<>();
+
+        LdapUser ldapUser = (LdapUser) authentication.getPrincipal();
+
+        if (isAdmin(authentication)) {
+            return getAllHosts();  // Admin gets all hosts
+        } else if (isDepartmentHead(authentication)) {
+            return getHostsForDepartment(ldapUser.getDepartment());
+        } else if (isTeamLeader(authentication)) {
+            return getHostsForTeam(ldapUser.getTeam());
+        } else {
+            return getHostsByUsername(ldapUser.getUsername());  // Regular user gets only their own hosts
+        }
     }
 
+    // Helper method to enrich hosts with live info
     private List<HostWithLiveInfo> enrichHostsWithLiveInfo(List<Host> hosts) {
-        return hosts.stream().map(host -> {
-            HostWithLiveInfo hostWithLiveInfo = new HostWithLiveInfo();
-            hostWithLiveInfo.setHost(host);
-            try {
-                HostLiveInfo liveInfo = hostLiveInfoService.convertToHostLiveInfo().stream()
-                        .filter(info -> info.getHostName().equals(host.getHostName()))
-                        .findFirst()
-                        .orElse(new HostLiveInfo());
-                hostWithLiveInfo.setLiveInfo(liveInfo);
-            } catch (Exception e) {
-                e.printStackTrace();
-                hostWithLiveInfo.setLiveInfo(new HostLiveInfo());
-            }
-            return hostWithLiveInfo;
-        }).collect(Collectors.toList());
+        return hosts.stream()
+                .map(host -> {
+                    HostWithLiveInfo hostWithLiveInfo = new HostWithLiveInfo();
+                    hostWithLiveInfo.setHost(host);
+                    hostWithLiveInfo.setLiveInfo(fetchHostLiveInfo(host));
+                    return hostWithLiveInfo;
+                })
+                .collect(Collectors.toList());
+    }
+
+    private HostLiveInfo fetchHostLiveInfo(Host host) {
+        try {
+            return hostLiveInfoService.convertToHostLiveInfo()
+                    .stream()
+                    .filter(info -> info.getHostName().equals(host.getHostName()))
+                    .findFirst()
+                    .orElse(new HostLiveInfo());
+        } catch (Exception e) {
+            return new HostLiveInfo();
+        }
     }
 
     public void checkmkActivateChanges() {
@@ -209,21 +191,34 @@ public class HostService {
         return restClientService.getEtag(url);
     }
 
-    private static final Logger logger = LoggerFactory.getLogger(HostService.class);
+    // Helper method to build Checkmk payload for adding a host
+    private ObjectNode buildCheckmkPayload(Host host) {
+        ObjectNode payload = objectMapper.createObjectNode();
+        payload.put("folder", "/");
+        payload.put("host_name", host.getHostName());
+        ObjectNode attributes = objectMapper.createObjectNode();
+        attributes.put("ipaddress", host.getIpAddress());
+        payload.set("attributes", attributes);
+        return payload;
+    }
+
+    // Helper method to build payload for updating a host
+    private ObjectNode buildUpdatePayload(Host host) {
+        ObjectNode payload = objectMapper.createObjectNode();
+        ObjectNode attributes = objectMapper.createObjectNode();
+        attributes.put("ipaddress", host.getIpAddress());
+        payload.set("attributes", attributes);
+        return payload;
+    }
 
     public void triggerServiceDiscoveryAndMonitor(String hostName) throws HostServiceException {
         String discoveryApiUrl = checkmkConfig.getApiUrl() + "/api/1.0/domain-types/service_discovery_run/actions/start/invoke";
         String waitDiscoveryCompletionUrl = checkmkConfig.getApiUrl() + "/api/1.0/objects/service_discovery_run/" + hostName + "/actions/wait-for-completion/invoke";
 
-        logger.info("Starting service discovery for host: {}", hostName);
-
         try {
-            // Trigger "refresh" to rescan services
             ObjectNode refreshPayload = objectMapper.createObjectNode();
             refreshPayload.put("host_name", hostName);
             refreshPayload.put("mode", "refresh");
-
-            logger.debug("Triggering service discovery with 'refresh' mode for host: {}", hostName);
             restClientService.sendPostRequest(discoveryApiUrl, refreshPayload.toString());
 
             // Poll for service discovery completion
@@ -235,25 +230,15 @@ public class HostService {
             ObjectNode fixAllPayload = objectMapper.createObjectNode();
             fixAllPayload.put("host_name", hostName);
             fixAllPayload.put("mode", "fix_all");
-
-            logger.debug("Triggering service discovery with 'fix_all' mode for host: {}", hostName);
             restClientService.sendPostRequest(discoveryApiUrl, fixAllPayload.toString());
-
-            logger.info("Triggering activation of changes for host: {}", hostName);
             checkmkActivateChanges();
-
-            logger.info("Successfully moved services to monitored phase for host: {}", hostName);
-
         } catch (ResourceAccessException e) {
             if (e.getCause() instanceof java.net.ProtocolException) {
-                logger.error("Too many redirects while trying to monitor services for host: {}", hostName);
                 throw new HostServiceException("Too many redirects while trying to monitor services for host: " + hostName, e);
             } else {
-                logger.error("Failed to connect to the monitoring service for host: {}", hostName, e);
                 throw new HostServiceException("Failed to connect to the monitoring service for host: " + hostName, e);
             }
         } catch (Exception e) {
-            logger.error("An error occurred while moving services to the monitored phase for host: {}", hostName, e);
             throw new HostServiceException("An error occurred while moving services to monitored phase", e);
         }
     }
@@ -264,25 +249,52 @@ public class HostService {
 
         for (int i = 0; i < retries; i++) {
             try {
-                logger.info("Polling service discovery completion (attempt {}/{})", i + 1, retries);
                 ResponseEntity<String> response = restClientService.sendGetRequest(waitUrl, String.class);
 
                 if (response.getStatusCode().is2xxSuccessful()) {
-                    logger.info("Service discovery completed on attempt {}", i + 1);
                     return true;
                 }
-
-                logger.warn("Service discovery not complete on attempt {}. Status code: {}", i + 1, response.getStatusCode());
                 Thread.sleep(delay);
 
             } catch (Exception e) {
-                logger.error("Error during polling for service discovery completion on attempt {}: {}", i + 1, e.getMessage());
+
             }
         }
 
-        logger.error("Service discovery did not complete after {} attempts.", retries);
         return false;
     }
 
+    // Check if the current user is an admin
+    private boolean isAdmin(Authentication authentication) {
+        return authentication.getAuthorities().stream()
+                .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ROLE_ADMIN"));
+    }
 
+    private boolean isDepartmentHead(Authentication authentication) {
+        return authentication.getAuthorities().stream()
+                .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ROLE_DEPARTMENTHEAD"));
+    }
+
+    private boolean isTeamLeader(Authentication authentication) {
+        return authentication.getAuthorities().stream()
+                .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ROLE_TEAMLEADER"));
+    }
+
+    private List<Host> getHostsForDepartment(String department) {
+        return getAllHosts().stream()
+                .filter(host -> {
+                    LdapUser hostUser = ldapUserService.findUserByEmail(host.getHostUserEmail());
+                    return hostUser != null && department.equals(hostUser.getDepartment());
+                })
+                .collect(Collectors.toList());
+    }
+
+    private List<Host> getHostsForTeam(String team) {
+        return getAllHosts().stream()
+                .filter(host -> {
+                    LdapUser hostUser = ldapUserService.findUserByEmail(host.getHostUserEmail());
+                    return hostUser != null && team.equals(hostUser.getTeam());
+                })
+                .collect(Collectors.toList());
+    }
 }

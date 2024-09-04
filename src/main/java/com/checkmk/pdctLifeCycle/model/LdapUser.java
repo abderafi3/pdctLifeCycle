@@ -4,25 +4,26 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
+import java.util.List;
 
 public class LdapUser implements UserDetails {
     private String firstName;
     private String lastName;
     private String email;
-    private Collection<? extends GrantedAuthority> authorities;
+    private String department;
+    private String team;
+    private List<GrantedAuthority> authorities;
 
-    public LdapUser(String firstName, String lastName, String email, Collection<? extends GrantedAuthority> authorities) {
+    public LdapUser(String firstName, String lastName, String email, String department, String team, List<GrantedAuthority> authorities) {
         this.firstName = firstName;
         this.lastName = lastName;
         this.email = email;
+        this.department = department;
+        this.team = team;
         this.authorities = authorities;
     }
 
-    // Getter methods for firstName, lastName, and email
-    public String getFirstName() { return firstName; }
-    public String getLastName() { return lastName; }
-    public String getEmail() { return email; }
-
+    // Implement required UserDetails methods and add getters for department and team
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return authorities;
@@ -30,12 +31,12 @@ public class LdapUser implements UserDetails {
 
     @Override
     public String getPassword() {
-        return null;  // LDAP typically doesn't provide passwords for authentication
+        return null;
     }
 
     @Override
     public String getUsername() {
-        return email;  // Use email as the username
+        return email;
     }
 
     @Override
@@ -56,5 +57,25 @@ public class LdapUser implements UserDetails {
     @Override
     public boolean isEnabled() {
         return true;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getDepartment() {
+        return department;
+    }
+
+    public String getTeam() {
+        return team;
     }
 }

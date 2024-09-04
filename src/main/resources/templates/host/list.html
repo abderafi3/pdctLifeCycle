@@ -16,14 +16,17 @@
 <div class="table-container" id="tableContainer" style="display: none;">
     <h3>Hosts</h3>
 
-    <!-- Add New Host Button - Only for Admin -->
-    <button type="button" class="btn btn-primary mb-3" onclick="location.href='/hosts/add'" sec:authorize="hasRole('ADMIN')">Add new Host</button>
+    <!-- Add New Host Button - Only for Admin, Department Head, or Team Leader -->
+    <button type="button" class="btn btn-primary mb-3" onclick="location.href='/hosts/add'"
+            sec:authorize="hasAnyRole('ADMIN', 'DEPARTMENTHEAD', 'TEAMLEADER')">
+        Add new Host
+    </button>
 
     <table class="table table-striped">
         <thead>
         <tr>
             <th>Host Name</th>
-            <th sec:authorize="hasRole('ADMIN')">Assigned User</th>
+            <th sec:authorize="hasAnyRole('ADMIN', 'DEPARTMENTHEAD', 'TEAMLEADER')">Assigned User</th>
             <th>IP Address</th>
             <th>Creation Date</th>
             <th>Expiration Date</th>
@@ -31,8 +34,8 @@
             <th class="ok-col">Services OK</th>
             <th class="warn-col">Services Warning</th>
             <th class="crit-col">Services Critical</th>
-            <!-- Action Column only for Admins -->
-            <th sec:authorize="hasRole('ADMIN')">Action</th>
+            <!-- Action Column for Admin, Department Head, or Team Leader -->
+            <th sec:authorize="hasAnyRole('ADMIN', 'DEPARTMENTHEAD', 'TEAMLEADER')">Action</th>
         </tr>
         </thead>
         <tbody id="hostsTableBody">
@@ -40,7 +43,8 @@
         </tbody>
     </table>
 </div>
-<!-- Loading Overlay for monitoring services-->
+
+<!-- Loading Overlay for monitoring services -->
 <div id="loadingOverlay" style="display: none;">
     <div class="spinner-border text-light" role="status">
         <span class="sr-only">Loading...</span>
@@ -59,7 +63,7 @@
             <div class="modal-body">
                 <div class="mb-3">
                     <label for="userEmail" class="form-label">User Email</label>
-                    <input type="email" class="form-control" id="userEmail" placeholder="Enter user email"> <!-- Readonly -->
+                    <input type="email" class="form-control" id="userEmail" placeholder="Enter user email" readonly>
                 </div>
                 <div class="mb-3">
                     <label for="notificationTitle" class="form-label">Notification Title</label>
@@ -83,7 +87,6 @@
         </div>
     </div>
 </div>
-
 
 <!-- Delete Confirmation Modal -->
 <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">

@@ -3,6 +3,7 @@ package com.checkmk.pdctLifeCycle.service;
 import com.checkmk.pdctLifeCycle.model.Host;
 import com.checkmk.pdctLifeCycle.model.HostLiveInfo;
 import com.checkmk.pdctLifeCycle.model.HostNotification;
+import com.checkmk.pdctLifeCycle.model.LdapUser;
 import com.checkmk.pdctLifeCycle.repository.NotificationRepository;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -17,6 +18,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @Service
 public class NotificationService {
@@ -30,32 +32,51 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final HostService hostService;
     private final HostLiveInfoService hostLiveInfoService;
+    private final LdapUserService ldapUserService;
     private final JavaMailSender javaMailSender;
 
     @Autowired
     public NotificationService(NotificationRepository notificationRepository, HostService hostService,
-                               HostLiveInfoService hostLiveInfoService, JavaMailSender javaMailSender){
+                               HostLiveInfoService hostLiveInfoService,LdapUserService ldapUserService, JavaMailSender javaMailSender){
         this.notificationRepository = notificationRepository;
         this.hostService = hostService;
         this.hostLiveInfoService = hostLiveInfoService;
         this.javaMailSender = javaMailSender;
+        this.ldapUserService=ldapUserService;
     }
 
-    // Store the last known number of critical services for each host
     private final Map<String, Integer> criticalServiceCountMap = new ConcurrentHashMap<>();
 
     public List<HostNotification> getAllNotificationsSortedByDate() {
         return notificationRepository.findAllByOrderByCreatedAtDesc();
     }
 
-    public List<HostNotification> getUnreadNotifications(String hostUserEmail) {
-        return notificationRepository.findByHostUserEmailAndReadFalse(hostUserEmail);
-    }
-
     public List<HostNotification> getAllNotificationsForUser(String hostUserEmail) {
         return notificationRepository.findByHostUserEmailOrderByCreatedAtDesc(hostUserEmail);
     }
 
+    public List<HostNotification> getUnreadNotifications(String userEmail) {
+        return notificationRepository.findByHostUserEmailAndReadFalse(userEmail);
+    }
+
+    public List<HostNotification> getNotificationsForDepartment(String department) {
+        List<LdapUser> usersInDepartment = ldapUserService.getUsersByDepartment(department);
+        List<String> userEmails = usersInDepartment.stream()
+                .map(LdapUser::getEmail)
+                .collect(Collectors.toList());
+        return notificationRepository.findByHostUserEmailInOrderByCreatedAtDesc(userEmails);
+    }
+
+    public List<HostNotification> getNotificationsForTeam(String team) {
+        List<LdapUser> usersInTeam = ldapUserService.getUsersByTeam(team);
+        List<String> userEmails = usersInTeam.stream()
+                .map(LdapUser::getEmail)
+                .collect(Collectors.toList());
+        return notificationRepository.findByHostUserEmailInOrderByCreatedAtDesc(userEmails);
+    }
+
+
+    // Mark a notification as read
     public void markNotificationAsRead(Long notificationId) {
         notificationRepository.findById(notificationId).ifPresent(notification -> {
             notification.setRead(true);
@@ -63,6 +84,7 @@ public class NotificationService {
         });
     }
 
+    // Create a notification
     public void createNotification(String hostUserEmail, String title, String summary, String createdBy, String hostName, String userFullName) {
         HostNotification hostNotification = new HostNotification(title, summary, hostUserEmail, createdBy, hostName, userFullName);
         notificationRepository.save(hostNotification);
@@ -141,7 +163,6 @@ public class NotificationService {
         helper.setTo(to);
         helper.setSubject(subject);
 
-        // Use a more formatted email body, separating the logic from what is stored in the database
         String formattedBody = """
             <div style="font-family: Arial, sans-serif;">
                 <p>Dear %s,</p>

@@ -167,7 +167,6 @@ const fetchLiveHostData = async () => {
     try {
         const response = await fetch('/hosts/live-data');
         if (!response.ok) throw new Error('Network response was not ok');
-
         const data = await response.json();
         updateHostsTable(data);
     } catch (error) {
@@ -180,23 +179,22 @@ const updateHostsTable = (hosts) => {
     const tableBody = document.getElementById('hostsTableBody');
     if (!tableBody) return;
 
-    const isAdminUser = isAdmin(); // Check if user is an admin
+    const isAdminOrLeaderUser = isAdminOrLeader(); // Check if user is admin or leader
     tableBody.innerHTML = '';
-
     hosts.forEach(hostWithLiveInfo => {
-        tableBody.appendChild(createHostRow(hostWithLiveInfo, isAdminUser));
+        tableBody.appendChild(createHostRow(hostWithLiveInfo, isAdminOrLeaderUser));
     });
 };
 
+
 // Create host row
-const createHostRow = (hostWithLiveInfo, isAdminUser) => {
+const createHostRow = (hostWithLiveInfo, isAdminOrLeaderUser) => {
     const host = hostWithLiveInfo.host;
     const liveInfo = hostWithLiveInfo.liveInfo;
-
     const row = document.createElement('tr');
     row.innerHTML = `
         <td>${host.hostName}</td>
-        ${isAdminUser ? `<td>${host.hostUser ? `<a href="#" data-email="${host.hostUserEmail}" data-host-name="${host.hostName}" data-user-full-name="${host.hostUser}" onclick="showNotificationModal(this)">${host.hostUser}</a>` : 'None'}</td>` : ''}
+        ${isAdminOrLeaderUser ? `<td>${host.hostUser ? `<a href="#" data-email="${host.hostUserEmail}" data-host-name="${host.hostName}" data-user-full-name="${host.hostUser}" onclick="showNotificationModal(this)">${host.hostUser}</a>` : 'None'}</td>` : ''}
         <td>${host.ipAddress}</td>
         <td>${host.creationDate}</td>
         <td>${host.expirationDate || 'None'}</td>
@@ -205,17 +203,16 @@ const createHostRow = (hostWithLiveInfo, isAdminUser) => {
         <td><a href="hosts/service-warning/${host.hostName}">${liveInfo.serviceWarning}</a></td>
         <td><a href="hosts/service-critical/${host.hostName}">${liveInfo.serviceCritical}</a></td>
     `;
-    if (isAdminUser) {
+
+    if (isAdminOrLeaderUser) {
         row.appendChild(createActionButtons(host.id, host.ipAddress));
     }
+
     return row;
 };
 
-
 // Get host state class
 const getHostStateClass = (state) => state === 'UP' ? 'status-up' : state === 'DOWN' ? 'status-down' : 'status-unknown';
-
-// Create action buttons for admin
 const createActionButtons = (hostId, hostIp) => {
     const actionCell = document.createElement('td');
     actionCell.innerHTML = `
@@ -293,11 +290,20 @@ const showNotificationModal = (element) => {
 };
 
 
-// Check if user is an admin
-const isAdmin = () => {
+// Check if user has specific roles (admin, department head, or team leader)
+const isAdminOrLeader = () => {
     const userRoles = document.getElementById('userRoles');
-    return userRoles?.value?.includes('ROLE_ADMIN');
+    return userRoles?.value?.includes('ROLE_ADMIN') ||
+           userRoles?.value?.includes('ROLE_DEPARTMENTHEAD') ||
+           userRoles?.value?.includes('ROLE_TEAMLEADER');
 };
+
+// Create the role-checking utility
+const hasRole = (role) => {
+    const userRoles = document.getElementById('userRoles').value;
+    return userRoles.includes(role);
+};
+
 
 // Function to redirect to edit page
 const editHost = (id) => {

@@ -1,43 +1,59 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/head :: commonHead}"></head>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity5">
+<head th:replace="~{fragments/head :: commonHead}">
+    <title>All Notifications</title>
+</head>
 <body>
 <div th:replace="~{fragments/nav :: navbar}"></div>
 
 <div class="container mt-4">
     <h3>All Notifications</h3>
-    <table class="table table-striped">
-        <thead>
-        <tr>
-            <th>Title</th>
-            <th>Message</th>
-            <th>Date Received</th>
-            <th th:if="${isAdmin}">Status</th>
-            <th th:if="${isAdmin}">Created By</th>
-            <th th:if="${isAdmin}">Host Name</th>
-            <th th:if="${isAdmin}">Assigned User</th>
-            <th th:if="${isAdmin}">Actions</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="notification : ${notifications}">
-            <td th:text="${notification.title}"></td>
-            <td th:text="${notification.message}"></td>
-            <td><span th:text="${#strings.replace(#strings.substring(notification.createdAt, 0, 16), 'T', ' ')}"></span></td>
-            <td th:if="${isAdmin}" th:text="${notification.read ? 'Read' : 'Unread'}"></td>
-            <td th:if="${isAdmin}" th:text="${notification.createdBy}"></td>
-            <td th:if="${isAdmin}" th:text="${notification.hostName}"></td>
-            <td th:if="${isAdmin}" th:text="${notification.userFullName}"></td>
-            <td th:if="${isAdmin}">
-                <form th:action="@{/notifications/delete/{id}(id=${notification.id})}" method="post">
-                    <button class="btn btn-delete btn-sm" type="submit">Delete</button>
-                </form>
-            </td>
-        </tr>
-        </tbody>
-    </table>
+
+    <!-- Table for displaying notifications -->
+    <div th:if="${notifications.size() > 0}">
+        <table class="table table-striped">
+            <thead>
+            <tr>
+                <th>Title</th>
+                <th>Message</th>
+                <th>Date Received</th>
+                <!-- Columns visible to Admin, Department Head, and Team Leader -->
+                <th sec:authorize="hasAnyRole('ADMIN', 'DEPARTMENTHEAD', 'TEAMLEADER')">Status</th>
+                <th sec:authorize="hasAnyRole('ADMIN', 'DEPARTMENTHEAD', 'TEAMLEADER')">Created By</th>
+                <th sec:authorize="hasAnyRole('ADMIN', 'DEPARTMENTHEAD', 'TEAMLEADER')">Host Name</th>
+                <th sec:authorize="hasAnyRole('ADMIN', 'DEPARTMENTHEAD', 'TEAMLEADER')">Assigned User</th>
+                <th sec:authorize="hasAnyRole('ADMIN', 'DEPARTMENTHEAD', 'TEAMLEADER')">Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="notification : ${notifications}">
+                <td th:text="${notification.title}"></td>
+                <td th:text="${notification.message}"></td>
+                <td>
+                    <span th:text="${#strings.replace(#strings.substring(notification.createdAt, 0, 16), 'T', ' ')}"></span>
+                </td>
+                <!-- Status, Created By, Host Name, and Assigned User visible to Admin, Department Head, and Team Leader -->
+                <td sec:authorize="hasAnyRole('ADMIN', 'DEPARTMENTHEAD', 'TEAMLEADER')" th:text="${notification.read ? 'Read' : 'Unread'}"></td>
+                <td sec:authorize="hasAnyRole('ADMIN', 'DEPARTMENTHEAD', 'TEAMLEADER')" th:text="${notification.createdBy}"></td>
+                <td sec:authorize="hasAnyRole('ADMIN', 'DEPARTMENTHEAD', 'TEAMLEADER')" th:text="${notification.hostName}"></td>
+                <td sec:authorize="hasAnyRole('ADMIN', 'DEPARTMENTHEAD', 'TEAMLEADER')" th:text="${notification.userFullName}"></td>
+                <td sec:authorize="hasAnyRole('ADMIN', 'DEPARTMENTHEAD', 'TEAMLEADER')">
+                    <form th:action="@{/notifications/delete/{id}(id=${notification.id})}" method="post">
+                        <button class="btn btn-delete btn-sm btn-danger" type="submit">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Message if there are no notifications -->
+    <div th:if="${notifications.size() == 0}">
+        <p class="alert alert-info">No notifications available at the moment.</p>
+    </div>
 </div>
 
+<!-- JS Scripts -->
 <script th:src="@{/js/script.js}"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>

@@ -8,9 +8,16 @@ import java.util.List;
 
 @Repository
 public interface NotificationRepository extends JpaRepository<HostNotification, Long> {
+
     List<HostNotification> findByHostUserEmailAndReadFalse(String hostUserEmail);
+
     List<HostNotification> findByHostUserEmailOrderByCreatedAtDesc(String hostUserEmail);
+
     List<HostNotification> findAllByOrderByCreatedAtDesc();
+
+
+    List<HostNotification> findByHostUserEmailInOrderByCreatedAtDesc(List<String> hostUserEmails);
+
 }
 
 
