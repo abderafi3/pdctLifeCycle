@@ -19,7 +19,7 @@
                 <th>Date Received</th>
                 <!-- Columns visible to Admin, Department Head, and Team Leader -->
                 <th sec:authorize="hasAnyRole('ADMIN', 'DEPARTMENTHEAD', 'TEAMLEADER')">Status</th>
-                <th sec:authorize="hasAnyRole('ADMIN', 'DEPARTMENTHEAD', 'TEAMLEADER')">Created By</th>
+                <th>Created By</th>
                 <th sec:authorize="hasAnyRole('ADMIN', 'DEPARTMENTHEAD', 'TEAMLEADER')">Host Name</th>
                 <th sec:authorize="hasAnyRole('ADMIN', 'DEPARTMENTHEAD', 'TEAMLEADER')">Assigned User</th>
                 <th sec:authorize="hasAnyRole('ADMIN', 'DEPARTMENTHEAD', 'TEAMLEADER')">Actions</th>
@@ -34,7 +34,7 @@
                 </td>
                 <!-- Status, Created By, Host Name, and Assigned User visible to Admin, Department Head, and Team Leader -->
                 <td sec:authorize="hasAnyRole('ADMIN', 'DEPARTMENTHEAD', 'TEAMLEADER')" th:text="${notification.read ? 'Read' : 'Unread'}"></td>
-                <td sec:authorize="hasAnyRole('ADMIN', 'DEPARTMENTHEAD', 'TEAMLEADER')" th:text="${notification.createdBy}"></td>
+                <td th:text="${notification.createdBy}"></td>
                 <td sec:authorize="hasAnyRole('ADMIN', 'DEPARTMENTHEAD', 'TEAMLEADER')" th:text="${notification.hostName}"></td>
                 <td sec:authorize="hasAnyRole('ADMIN', 'DEPARTMENTHEAD', 'TEAMLEADER')" th:text="${notification.userFullName}"></td>
                 <td sec:authorize="hasAnyRole('ADMIN', 'DEPARTMENTHEAD', 'TEAMLEADER')">

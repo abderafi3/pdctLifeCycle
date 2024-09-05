@@ -20,18 +20,15 @@ public class LdapUserService {
     private static class UserContextMapper implements ContextMapper<LdapUser> {
 
         @Override
-        public LdapUser mapFromContext(Object ctx) throws javax.naming.NamingException {
+        public LdapUser mapFromContext(Object ctx) {
             DirContextOperations context = (DirContextOperations) ctx;
 
-            // Retrieve first name, last name, email, department, and team (from description)
             String firstName = context.getStringAttribute("givenName");
             String lastName = context.getStringAttribute("sn");
             String email = context.getStringAttribute("userPrincipalName");
             String department = context.getStringAttribute("department");
             String team = context.getStringAttribute("description");
 
-
-            // Return the mapped LdapUser object with department and team
             return new LdapUser(firstName, lastName, email, department, team, List.of());
         }
     }
@@ -59,19 +56,17 @@ public class LdapUserService {
         return users.isEmpty() ? null : users.get(0);
     }
 
-    // Filter users by department from the list of all users
     public List<LdapUser> getUsersByDepartment(String department) {
-        List<LdapUser> allUsers = getAllUsers(); // Fetch all users once
+        List<LdapUser> allUsers = getAllUsers();
         return allUsers.stream()
-                .filter(user -> department.equals(user.getDepartment())) // Filter by department
+                .filter(user -> department.equals(user.getDepartment()))
                 .collect(Collectors.toList());
     }
 
-    // Filter users by team from the list of all users
     public List<LdapUser> getUsersByTeam(String team) {
-        List<LdapUser> allUsers = getAllUsers(); // Fetch all users once
+        List<LdapUser> allUsers = getAllUsers();
         return allUsers.stream()
-                .filter(user -> team.equals(user.getTeam())) // Filter by team
+                .filter(user -> team.equals(user.getTeam()))
                 .collect(Collectors.toList());
     }
 

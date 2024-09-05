@@ -23,7 +23,6 @@ public class LdapUser implements UserDetails {
         this.authorities = authorities;
     }
 
-    // Implement required UserDetails methods and add getters for department and team
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return authorities;

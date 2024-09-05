@@ -31,7 +31,6 @@ public class NotificationController {
     public List<HostNotification> getAllUnreadNotifications(Authentication authentication) {
         if (authentication != null && authentication.isAuthenticated()) {
             LdapUser currentUser = (LdapUser) authentication.getPrincipal();
-            // Only fetch unread notifications for the logged-in user, no matter the role
             return notificationService.getUnreadNotifications(currentUser.getEmail());
         }
         return List.of();
@@ -56,12 +55,10 @@ public class NotificationController {
             List<String> roles = currentUser.getAuthorities().stream()
                     .map(GrantedAuthority::getAuthority)
                     .toList();
-
             if (roles.contains("ROLE_ADMIN") || roles.contains("ROLE_DEPARTMENTHEAD") || roles.contains("ROLE_TEAMLEADER")) {
                 return notificationService.getUnreadNotifications(currentUser.getEmail()).size();
             }
 
-            // If it's a regular user, return only their own unread notifications
             return notificationService.getUnreadNotifications(currentUser.getEmail()).size();
         }
 
@@ -83,8 +80,7 @@ public class NotificationController {
         List<HostNotification> notifications = getNotificationsByRole(currentUser, roles);
         model.addAttribute("pageTitle", "All Notifications");
         model.addAttribute("notifications", notifications);
-        model.addAttribute("isAdmin", roles.contains("ROLE_ADMIN")); // Check if the user is an admin
-
+        model.addAttribute("isAdmin", roles.contains("ROLE_ADMIN"));
         return "notifications";
     }
 
@@ -93,11 +89,11 @@ public class NotificationController {
 
             return notificationService.getAllNotificationsSortedByDate();
         } else if (roles.contains("ROLE_DEPARTMENTHEAD")) {
-            return notificationService.getNotificationsForDepartment(currentUser.getDepartment()); // Department Head sees department's notifications
+            return notificationService.getNotificationsForDepartment(currentUser.getDepartment());
         } else if (roles.contains("ROLE_TEAMLEADER")) {
             return notificationService.getNotificationsForTeam(currentUser.getTeam());
         } else {
-            return notificationService.getAllNotificationsForUser(currentUser.getEmail()); // Regular user sees their own notifications
+            return notificationService.getAllNotificationsForUser(currentUser.getEmail());
         }
     }
 

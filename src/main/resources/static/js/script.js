@@ -179,7 +179,7 @@ const updateHostsTable = (hosts) => {
     const tableBody = document.getElementById('hostsTableBody');
     if (!tableBody) return;
 
-    const isAdminOrLeaderUser = isAdminOrLeader(); // Check if user is admin or leader
+    const isAdminOrLeaderUser = isAdminOrLeader();
     tableBody.innerHTML = '';
     hosts.forEach(hostWithLiveInfo => {
         tableBody.appendChild(createHostRow(hostWithLiveInfo, isAdminOrLeaderUser));
@@ -191,11 +191,15 @@ const updateHostsTable = (hosts) => {
 const createHostRow = (hostWithLiveInfo, isAdminOrLeaderUser) => {
     const host = hostWithLiveInfo.host;
     const liveInfo = hostWithLiveInfo.liveInfo;
+    const ldapUser = hostWithLiveInfo.ldapUser;
+
     const row = document.createElement('tr');
     row.innerHTML = `
         <td>${host.hostName}</td>
-        ${isAdminOrLeaderUser ? `<td>${host.hostUser ? `<a href="#" data-email="${host.hostUserEmail}" data-host-name="${host.hostName}" data-user-full-name="${host.hostUser}" onclick="showNotificationModal(this)">${host.hostUser}</a>` : 'None'}</td>` : ''}
+        ${isAdminOrLeaderUser ? `<td>${ldapUser ? `<a href="#" data-email="${ldapUser.email}" data-host-name="${host.hostName}" data-user-full-name="${ldapUser.firstName} ${ldapUser.lastName}" onclick="showNotificationModal(this)">${ldapUser.firstName} ${ldapUser.lastName}</a>` : 'None'}</td>` : ''}
         <td>${host.ipAddress}</td>
+        <td>${ldapUser && ldapUser.department ? ldapUser.department : 'Unknown'}</td>
+        <td>${ldapUser && ldapUser.team ? ldapUser.team : 'Unknown'}</td>
         <td>${host.creationDate}</td>
         <td>${host.expirationDate || 'None'}</td>
         <td class="${getHostStateClass(liveInfo.hostState)}">${liveInfo.hostState || 'Unknown'}</td>
@@ -335,31 +339,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const importButton = document.getElementById('importButton');
     const checkboxes = document.querySelectorAll('input[name="selectedHostIds"]:not(:disabled)');
 
-    // Run the following code only if the elements exist on the page
     if (selectAllCheckbox && importButton) {
         let checkboxArray = Array.from(checkboxes);
 
-        // Disable select all checkbox if no hosts to select
         function updateSelectAllCheckboxState() {
             selectAllCheckbox.disabled = checkboxArray.length === 0;
         }
-
-        // Initial check to disable "Select All" if no checkboxes
         updateSelectAllCheckboxState();
 
-        // Event listener for individual checkboxes
         checkboxArray.forEach(checkbox => {
             checkbox.addEventListener('change', () => {
                 toggleImportButton();
-                updateSelectAllCheckboxState();  // Recheck to disable "Select All" if necessary
-                updateSelectAllCheckbox();  // Update "Select All" state
+                updateSelectAllCheckboxState();
+                updateSelectAllCheckbox();
             });
         });
 
-        // Event listener for "Select All" checkbox
         selectAllCheckbox.addEventListener('change', toggleSelectAll);
 
-        // Function to toggle all checkboxes when "Select All" is clicked
         function toggleSelectAll() {
             const isChecked = selectAllCheckbox.checked;
             checkboxArray.forEach(checkbox => {
@@ -368,19 +365,16 @@ document.addEventListener('DOMContentLoaded', () => {
             toggleImportButton();
         }
 
-        // Function to enable or disable the "Import" button
         function toggleImportButton() {
             const anyChecked = checkboxArray.some(checkbox => checkbox.checked);
             importButton.disabled = !anyChecked;
         }
 
-        // Function to update the state of the "Select All" checkbox
         function updateSelectAllCheckbox() {
             const allChecked = checkboxArray.every(checkbox => checkbox.checked);
             selectAllCheckbox.checked = allChecked;
         }
 
-        // Initial toggle of the import button based on pre-checked boxes (if any)
         toggleImportButton();
     }
 });
@@ -427,9 +421,9 @@ const sendNotification = () => {
         if (response.ok) {
             notificationStatus.style.color = 'green';
             notificationStatus.textContent = 'Notification sent successfully!';
-            notificationStatus.style.display = 'block'; // Show status message
+            notificationStatus.style.display = 'block';
 
-            // Close the modal after 2 seconds
+            // Close the modal after 1 seconds
             setTimeout(() => {
                 const sendNotificationModal = bootstrap.Modal.getInstance(document.getElementById('sendNotificationModal'));
                 sendNotificationModal.hide();
@@ -469,15 +463,10 @@ const filterTable = () => {
 
 // Function to open the Install Agent Modal and pass the host IP
 function openInstallAgentModal(hostIp) {
-    // Set the host IP in the modal's input field
     document.getElementById('hostIp').value = hostIp;
-
-    // Reset the username, password, and status message fields
     document.getElementById('username').value = '';
     document.getElementById('password').value = '';
     document.getElementById('installStatus').style.display = 'none';
-
-    // Open the modal
     const installAgentModal = new bootstrap.Modal(document.getElementById('installAgentModal'));
     installAgentModal.show();
 }
@@ -488,22 +477,15 @@ function submitAgentInstall() {
     const host = document.getElementById('hostIp').value;
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
-
-    // Ensure both username and password are provided
     if (!username || !password) {
         document.getElementById('installStatus').style.display = 'block';
         document.getElementById('installStatus').textContent = 'Please enter both username and password.';
         return;
     }
 
-    // Hide the install agent modal
     const installAgentModal = bootstrap.Modal.getInstance(document.getElementById('installAgentModal'));
     installAgentModal.hide();
-
-    // Show the overlay while processing
     showOverlay('Installing agent...');
-
-    // Set a timeout for the fetch request
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
         controller.abort();
@@ -531,7 +513,7 @@ function submitAgentInstall() {
         showModalMessage('Agent Installation', result);
     })
     .catch(error => {
-        hideOverlay();  // Hide the overlay in case of error
+        hideOverlay();
         if (error.name === 'AbortError') {
             showModalMessage('Agent Installation', 'Installation request timed out. Please try again.');
         } else {

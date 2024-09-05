@@ -153,14 +153,14 @@ public class HostService {
 
     // Helper method to enrich hosts with live info
     private List<HostWithLiveInfo> enrichHostsWithLiveInfo(List<Host> hosts) {
-        return hosts.stream()
-                .map(host -> {
-                    HostWithLiveInfo hostWithLiveInfo = new HostWithLiveInfo();
-                    hostWithLiveInfo.setHost(host);
-                    hostWithLiveInfo.setLiveInfo(fetchHostLiveInfo(host));
-                    return hostWithLiveInfo;
-                })
-                .collect(Collectors.toList());
+        return hosts.stream().map(host -> {
+            HostWithLiveInfo hostWithLiveInfo = new HostWithLiveInfo();
+            hostWithLiveInfo.setHost(host);
+            hostWithLiveInfo.setLiveInfo(fetchHostLiveInfo(host));
+            LdapUser hostUser = ldapUserService.findUserByEmail(host.getHostUserEmail());
+            hostWithLiveInfo.setLdapUser(hostUser);
+            return hostWithLiveInfo;
+        }).collect(Collectors.toList());
     }
 
     private HostLiveInfo fetchHostLiveInfo(Host host) {
@@ -264,7 +264,6 @@ public class HostService {
         return false;
     }
 
-    // Check if the current user is an admin
     private boolean isAdmin(Authentication authentication) {
         return authentication.getAuthorities().stream()
                 .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ROLE_ADMIN"));

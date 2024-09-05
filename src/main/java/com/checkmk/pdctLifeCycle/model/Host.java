@@ -12,24 +12,16 @@ public class Host {
 
     @Id
     private String id;
-
     private String hostName;
-
     private String ipAddress;
-
     private String creationDate;
-
     private String expirationDate;
-
     @ManyToOne
     @JoinColumn(name="notification_id")
     private HostNotification hostNotification;
-
     private String hostUser;
-
     private String hostUserEmail;
-
-    @Transient // This field will not be persisted to the database
+    @Transient
     private boolean imported;
 
     // Constructors

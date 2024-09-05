@@ -70,9 +70,8 @@ public class SshService {
         String osCommand = "uname -s";  // Default to Linux/Unix systems
         String osType = executeCommand(session, osCommand);
 
-        // If uname fails or returns nothing, assume it's a Windows system and use the 'ver' command
         if (osType.isEmpty()) {
-            osCommand = "ver";  // Use 'ver' command for Windows
+            osCommand = "ver";
             osType = executeCommand(session, osCommand);
         }
 
@@ -108,7 +107,7 @@ public class SshService {
         }
     }
 
-    // Method to execute a command on the remote session and capture both output and error streams
+    // Method to execute a command on the remote session
     private String executeCommand(Session session, String command) throws Exception {
         ChannelExec channel = (ChannelExec) session.openChannel("exec");
         channel.setCommand(command);
@@ -123,14 +122,12 @@ public class SshService {
 
         try {
             while (true) {
-                // Capture standard output
                 while (in.available() > 0) {
                     int i = in.read(tmp, 0, 1024);
                     if (i < 0) break;
                     outputBuffer.append(new String(tmp, 0, i));
                 }
 
-                // Capture error output
                 while (err.available() > 0) {
                     int i = err.read(tmp, 0, 1024);
                     if (i < 0) break;
@@ -144,7 +141,7 @@ public class SshService {
                     break;
                 }
 
-                Thread.sleep(1000);  // Prevent tight loop
+                Thread.sleep(1000);
             }
         } finally {
             in.close();

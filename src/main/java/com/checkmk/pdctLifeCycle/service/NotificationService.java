@@ -180,7 +180,7 @@ public class NotificationService {
         // Send email
         sendEmail(hostUserEmail, subject, summary);
 
-        // Create a notification with the summary
+        // Create a notification
         createNotification(hostUserEmail, subject, summary, createdBy, hostName, userFullName);
     }
 

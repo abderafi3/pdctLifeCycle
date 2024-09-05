@@ -3,6 +3,7 @@ package com.checkmk.pdctLifeCycle.model;
 public class HostWithLiveInfo {
     private Host host;
     private HostLiveInfo liveInfo;
+    private LdapUser ldapUser;
 
     // Getters and Setters
     public Host getHost() {
@@ -21,4 +22,11 @@ public class HostWithLiveInfo {
         this.liveInfo = liveInfo;
     }
 
+    public LdapUser getLdapUser() {
+        return ldapUser;
+    }
+
+    public void setLdapUser(LdapUser ldapUser) {
+        this.ldapUser = ldapUser;
+    }
 }

@@ -115,7 +115,6 @@ public class HostLiveInfoService {
     }
 
 
-    // Fetch data from Checkmk for a given host and view name
     private String fetchDataForHost(String hostName, String viewName) {
         String apiUrl = checkmkConfig.getApiUrl() + "/view.py?host=" + hostName +
                 "&output_format=json_export&site=" + checkmkConfig.getCheckmkSite() + "&view_name=" + viewName;

@@ -8,7 +8,6 @@
     </button>
     <div class="collapse navbar-collapse" id="navbarContent">
         <ul class="navbar-nav me-auto">
-            <!-- Hosts Link -->
             <li th:if="${#authentication.name != 'anonymousUser'}" class="nav-item">
                 <a class="nav-link" th:href="@{/hosts}">Hosts</a>
             </li>
@@ -24,7 +23,6 @@
                 </ul>
             </li>
 
-            <!-- Admin, Department Head, or Team Leader Section -->
             <li sec:authorize="hasRole('ADMIN')" class="nav-item">
                 <a class="nav-link" th:href="@{/hosts/import}">Import Hosts</a>
             </li>

@@ -28,12 +28,14 @@
             <th>Host Name</th>
             <th sec:authorize="hasAnyRole('ADMIN', 'DEPARTMENTHEAD', 'TEAMLEADER')">Assigned User</th>
             <th>IP Address</th>
+            <th>Department</th>
+            <th>Team</th>
             <th>Creation Date</th>
             <th>Expiration Date</th>
             <th>Host State</th>
-            <th class="ok-col">Services OK</th>
-            <th class="warn-col">Services Warning</th>
-            <th class="crit-col">Services Critical</th>
+            <th class="ok-col">OK</th>
+            <th class="warn-col">Warn</th>
+            <th class="crit-col">Crit</th>
             <!-- Action Column for Admin, Department Head, or Team Leader -->
             <th sec:authorize="hasAnyRole('ADMIN', 'DEPARTMENTHEAD', 'TEAMLEADER')">Action</th>
         </tr>
