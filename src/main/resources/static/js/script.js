@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         fetchLiveHostData().then(() => toggleLoader(loader, tableContainer, false));
 
-        setInterval(fetchLiveHostData, 5000);
+        setInterval(fetchLiveHostData, 3000);
     }
 
     setupFormSubmit('addHostForm', handleAddHostFormSubmit);
@@ -489,10 +489,10 @@ function submitAgentInstall() {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
         controller.abort();
-    }, 30000);
+    }, 50000);
 
     // Make the API call to install the agent
-    fetch(`/api/hosts/install-agent`, {
+    fetch(`/hosts/install-agent`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
