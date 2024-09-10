@@ -155,7 +155,7 @@ public class NotificationService {
         }
     }
 
-    public void sendEmail(String to, String subject, String body) throws MessagingException {
+    public void sendEmail(String to, String userFullName, String subject, String body) throws MessagingException {
 
         MimeMessage message = javaMailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true);
@@ -164,12 +164,12 @@ public class NotificationService {
         helper.setSubject(subject);
 
         String formattedBody = """
-            <div style="font-family: Arial, sans-serif;">
-                <p>Dear %s,</p>
-                <p>%s</p>
-                <p>Best regards,<br>Host Management Team</p>
-            </div>
-        """.formatted(to, body);
+        <div style="font-family: Arial, sans-serif;">
+            <p>Dear %s,</p>
+            <p>%s</p>
+            <p>Best regards,<br>Host Management Team</p>
+        </div>
+    """.formatted(userFullName, body);
 
         helper.setText(formattedBody, true);
 
@@ -178,7 +178,7 @@ public class NotificationService {
 
     private void sendEmailAndCreateNotification(String hostUserEmail, String subject, String summary, String createdBy, String hostName, String userFullName, int... counts) throws MessagingException {
         // Send email
-        sendEmail(hostUserEmail, subject, summary);
+        sendEmail(hostUserEmail, userFullName, subject, summary);
 
         // Create a notification
         createNotification(hostUserEmail, subject, summary, createdBy, hostName, userFullName);

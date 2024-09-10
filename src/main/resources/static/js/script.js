@@ -39,8 +39,10 @@ const handleAddHostFormSubmit = async (event) => {
     try {
         const response = await fetch(`/hosts/validate-hostname?hostName=${hostName}`);
         const data = await response.json();
-
-        if (data.exists) {
+        if (!isNameValid(hostName)){
+         showErrorModal('Hostname  should not contain any spaces. Please choose a valid name ');
+        }
+        else if (data.exists) {
             showErrorModal('Host name already exists. Please choose another one.');
         } else if (!isValidIP(ipAddress)) {
             showErrorModal('Invalid IP address. Please enter a valid IP.');
@@ -54,6 +56,10 @@ const handleAddHostFormSubmit = async (event) => {
         console.error('Error validating hostname or IP:', error);
         showErrorModal('An error occurred while validating the input.');
     }
+};
+//Hostname Validation
+const isNameValid = (name) => {
+  return !(/\s/.test(name));
 };
 
 // Handle edit host form submission
