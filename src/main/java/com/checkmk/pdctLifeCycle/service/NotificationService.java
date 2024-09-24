@@ -86,6 +86,17 @@ public class NotificationService {
 
     // Create a notification
     public void createNotification(String hostUserEmail, String title, String summary, String createdBy, String hostName, String userFullName) {
+
+         if (title == null || title.trim().isEmpty()) {
+            throw new IllegalArgumentException("Notification title cannot be empty.");
+        }
+        if (summary == null || summary.trim().isEmpty()) {
+            throw new IllegalArgumentException("Notification message cannot be empty.");
+        }
+        if (hostUserEmail == null || hostUserEmail.trim().isEmpty()) {
+            throw new IllegalArgumentException("User email cannot be empty.");
+        }
+        
         HostNotification hostNotification = new HostNotification(title, summary, hostUserEmail, createdBy, hostName, userFullName);
         notificationRepository.save(hostNotification);
     }
@@ -177,6 +188,17 @@ public class NotificationService {
     }
 
     private void sendEmailAndCreateNotification(String hostUserEmail, String subject, String summary, String createdBy, String hostName, String userFullName, int... counts) throws MessagingException {
+        
+        if (subject == null || subject.trim().isEmpty()) {
+            throw new IllegalArgumentException("Email subject cannot be empty.");
+        }
+        if (summary == null || summary.trim().isEmpty()) {
+            throw new IllegalArgumentException("Email body cannot be empty.");
+        }
+        if (hostUserEmail == null || hostUserEmail.trim().isEmpty()) {
+            throw new IllegalArgumentException("Recipient email cannot be empty.");
+        }
+        
         // Send email
         sendEmail(hostUserEmail, userFullName, subject, summary);
 
